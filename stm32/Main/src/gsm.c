@@ -32,23 +32,26 @@
 
 #define GSM_MAX_DATA_SIZE 1024
 
+#define ROLLER_HOST "www.hwytree.com"
+#define ROLLER_ADDR1 "http://www.hwytree.com/roller1.asp"
+#define ROLLER_ADDR2 "http://www.hwytree.com/roller2.asp"
+#define ROLLER_PHONE_NUM "18802150339"
+#define ROLLER_HTTP_PROTOCOL "HTTP/1.1"
+#define ROLLER_USER_AGENT "User-Agent: Fiddler"
 
-static uint16_t gsm_res_cnt = 0;
-static uint8_t gsm_datas[GSM_MAX_DATA_SIZE];
-static uint8_t ParserCSQ(void);
-static void PrintData(void);
+static uint16_t gsm_rcv_data_cnt = 0;
+static uint8_t gsm_rcv_datas[GSM_MAX_DATA_SIZE];
+static uint8_t gsm_snd_datas[GSM_MAX_DATA_SIZE];
+
+static uint8_t cookie[500];
+static uint8_t longitude[16];
+static uint8_t latitude[16];
+
+static uint8_t WaitFor(uint8_t *p,uint32_t timeout);
 static void DataReset(void);
-
-
-/* retrieve data from UART4 DMA buffer */
-void GSM_RetrieveData(void * src, size_t len)
-{
-  if(gsm_res_cnt + len < GSM_MAX_DATA_SIZE)
-  {
-    memcpy(&gsm_datas[gsm_res_cnt], src, len);
-    gsm_res_cnt += len;
-  }
-}
+static uint8_t ParserCSQ(void);
+static uint8_t ParserCookie(uint32_t timeout);
+static uint8_t ParserLocation(void);
 
 /* send AT command */
 void GSM_SendAT(uint8_t *data)
@@ -78,6 +81,17 @@ void GSM_SendATData(uint8_t *data)
     UART4_SendByte(data[i]);
   }
   UART4_SendByte(0x1A);  
+  DataReset();
+}
+
+/* retrieve data from UART4 DMA buffer */
+void GSM_RetrieveData(void * src, size_t len)
+{
+  if(gsm_rcv_data_cnt + len < GSM_MAX_DATA_SIZE)
+  {
+    memcpy(&gsm_rcv_datas[gsm_rcv_data_cnt], src, len);
+    gsm_rcv_data_cnt += len;
+  }
 }
 
 uint8_t GSM_Wakeup(void)
@@ -88,7 +102,7 @@ uint8_t GSM_Wakeup(void)
   while(i < 10)
   {
     GSM_SendAT("AT+CSCLK=0");
-    err = GSM_WaitString("OK", 2);
+    err = WaitFor("OK", 2);
     if(err == 0)
     {
       return 0;
@@ -125,6 +139,34 @@ uint8_t GSM_PowerOn(void)
     }
 
     INFO("\r\n PSTATUS is OK now ! \r\n");
+    /* 
+      Note: 
+      A HEX string such as "00 49 49 49 49 FF FF FF FF" will be sent out through serial port at the baud rate of 115200 immediately after SIM800 Series is powered on. 
+      The string shall be ignored since it is used for synchronization with PC tool. 
+      Only enter AT Command through serial port after SIM800 Series is powered on and Unsolicited Result Code "RDY" is received from serial port. 
+      If auto-bauding is enabled, the Unsolicited Result Codes "RDY" and so on are not indicated when you start up the ME, and the "AT" prefix, or "at" prefix must be set at the beginning of each command line.
+      If we are using auto-bauding, it is recommended to wait 3 to 5 seconds before sending the first AT character. 
+      Otherwise undefined characters might be returned. 
+
+      Right now, we are using fixed baud rate. (1. AT+IPR=115200 2. AT&W 3. reset sim800C)
+      If the SIM card's inserted, we'll receive the stings as the following:
+      
+      RDY
+      
+      +CFUN: 1
+      
+      +CPIN: READY
+      
+      Call Ready
+      
+      SMS Ready
+
+      So we can start our operation by wait for "SMS Ready"
+      */
+    //SysTick_Delay_ms(5000);
+    WaitFor("SMS Ready", 20);
+   
+    
   }
   else
   {
@@ -153,51 +195,39 @@ uint8_t GSM_PowerOn(void)
 uint8_t GSM_GPRSConnect(void)
 {
   uint8_t err = 0; 	
-  uint8_t i = 0;
-
-  while(i < 50)
-  {
-    GSM_SendAT("AT");
-    err = GSM_WaitString("OK", 2);
-    if(err == 0)
-    {
-      break;
-    }		
-    i++;
-  }
 
   /* No echo */
-  GSM_SendAT("ATE1");
-  err = GSM_WaitString("OK",2);  
+  GSM_SendAT("ATE0");
+  err = WaitFor("OK",2);  
   if(err > 0)
     return err;		
 
-  /* Displays signal strength and channel bit error rate */
+  /* Displays signal strength and channel bit error rate - +CSQ: 20,0*/
   GSM_SendAT("AT+CSQ"); 
-  err = GSM_WaitString("+CSQ:", 10);    //AT+CGREG? +CGREG: 0,3 OK
+  err = WaitFor("+CSQ:", 10);
   if(err > 0)
     return err; 
 
   err = ParserCSQ();
   if(0 == err)
   {
-    /* Network Registration Status */
+    /* Network Registration Status  - CGREG: 0,3 OK*/
     GSM_SendAT("AT+CGREG?");
-    err = GSM_WaitString("+CGREG:", 2);    //AT+CGREG? +CGREG: 0,3 OK
+    err = WaitFor("+CGREG:", 2);
     if(err > 0)
       return err;
 
-    /* Check if the MS is connected to the GPRS network */
+    /* Check if the MS is connected to the GPRS network - +CGATT: 0 OK*/
     GSM_SendAT("AT+CGATT?");
-    err = GSM_WaitString("+CGATT:", 2);    //AT+CGATT? +CGATT: 0 OK
+    err = WaitFor("+CGATT:", 2);
     if(err > 0)
       return err;	
 
     SysTick_Delay_ms(100);
 
-    /* Deactivate GPRS PDP Context */
+    /* Deactivate GPRS PDP Context - AT+CIPSHUT SHUT OK*/
     GSM_SendAT("AT+CIPSHUT");    
-    err = GSM_WaitString("SHUT OK", 15);    //AT+CIPSHUT SHUT OK
+    err = WaitFor("SHUT OK", 15);
     if(err > 0)
       return err;	
 
@@ -205,56 +235,186 @@ uint8_t GSM_GPRSConnect(void)
 
     /* Start Task and Set APN, USER NAME, PASSWORD */
     GSM_SendAT("AT+CSTT");    
-    err=GSM_WaitString("OK", 5);    //AT+CSTT OK
+    err=WaitFor("OK", 5);
     if(err>0)
       return err;	
 
     /* Bring Up Wireless Connection with GPRS or CSD */
     GSM_SendAT("AT+CIICR");
-    err=GSM_WaitString("OK", 10);    //AT+CIICR OK
+    err=WaitFor("OK", 10);
     if(err>0)
       return err;	
     SysTick_Delay_ms(500);
   
-    /* Get Local IP Address */
+    /* Get Local IP Address - 10.222.243.153*/
     GSM_SendAT("AT+CIFSR");
-    err=GSM_WaitString("+CIFSR", 2);    //AT+CIFSR 10.222.243.153
+    err=WaitFor(".", 2);
     if(err>0)
-    return err;	 
-#if 0    
-    /* Configure Module as Server */
-    GSM_SendAT("AT+CIPSERVER=1,6001");
-    err=GSM_WaitString("OK", 10);    //AT+CIICR OK
-    if(err>0)
-      return err;	
-    SysTick_Delay_ms(500);
-#endif
-
-    /* Start up TCP or UDP connection */
-    GSM_SendAT("AT+CIPSTART=\"TCP\",\"www.coolbug.cn\",6001"); 
-    err=GSM_WaitString("CONNECT OK",10);
-    if(err>0)
-    return err;	
+      return err;	 
 
   }
 
   return err;    
 }
 
+
+uint8_t GSM_Location(void)
+{
+  uint8_t err = 0; 	
+
+  /* No echo */
+  GSM_SendAT("AT+SAPBR=3,1,\"Contype\",\"GPRS\"");
+  err = WaitFor("OK",2);  
+  if(err > 0)
+    return err;		
+
+  GSM_SendAT("AT+SAPBR=3,1,\"APN\",\"CMNET\"");
+  err = WaitFor("OK",2);  
+  if(err > 0)
+    goto 	LOCATION_EXIT;
+
+  GSM_SendAT("AT+SAPBR=1,1");
+  err = WaitFor("OK",2);  
+  if(err > 0)
+    goto 	LOCATION_EXIT;
+  
+  GSM_SendAT("AT+SAPBR=2,1");
+  err = WaitFor("OK",2);  
+  if(err > 0)
+    goto 	LOCATION_EXIT; 
+
+  GSM_SendAT("AT+CIPGSMLOC=1,1");
+  err = WaitFor("OK",20);  
+  if(err > 0)
+    goto 	LOCATION_EXIT; 
+
+  err = ParserLocation();
+  if(err > 0)
+  {
+  }
+
+LOCATION_EXIT:
+
+  GSM_SendAT("AT+SAPBR=0,1");
+  err = WaitFor("OK",2);  
+  if(err > 0)
+    return err; 
+
+	return err;
+}
+
+uint8_t GSM_GPRSSendData(void)
+{
+  uint8_t err = 0; 	
+
+  /* Start up TCP or UDP connection */
+  GSM_SendAT("AT+CIPSTART=\"TCP\",\"www.hwytree.com\",80"); 
+  err = WaitFor("CONNECT OK",20);
+  if(err > 0)
+    return err;	
+
+  /* Send Data Through TCP or UDP Connection */
+  GSM_SendAT("AT+CIPSEND"); 
+  err = WaitFor(">",2);
+  if(err > 0)
+    return err; 
+
+  sprintf((char*)gsm_snd_datas, 
+    "GET %s?session=0&pn=%s %s\r\n%s\r\nHost: %s\r\n\r\n\0", 
+    ROLLER_ADDR1,
+    ROLLER_PHONE_NUM,
+    ROLLER_HTTP_PROTOCOL,
+    ROLLER_USER_AGENT,
+    ROLLER_HOST
+    );
+  GSM_SendATData(gsm_snd_datas);
+  err = WaitFor("SEND OK",2);
+  if(err > 0)
+    return err;   
+  
+  err = ParserCookie(10);
+  if(0 == err)
+  {
+    /* Send Data Through TCP or UDP Connection */
+    GSM_SendAT("AT+CIPSEND"); 
+    err = WaitFor(">",2);
+    if(err > 0)
+      return err;  
+    
+    sprintf((char*)gsm_snd_datas, 
+      "GET %s?session=1&pn=%s %s\r\n%s\r\nHost: %s\r\nCookie: %s\r\n\r\n\0", 
+      ROLLER_ADDR1,
+      ROLLER_PHONE_NUM,
+      ROLLER_HTTP_PROTOCOL,
+      ROLLER_USER_AGENT,
+      ROLLER_HOST,    
+      (char*)cookie
+      );
+    GSM_SendATData(gsm_snd_datas);    
+    err = WaitFor("SEND OK",2);
+    if(err > 0)
+      return err;   
+
+    
+    err = WaitFor("CXALL",60*60);
+    if(err > 0)
+      return err; 
+
+    /* Send Data Through TCP or UDP Connection */
+    GSM_SendAT("AT+CIPSEND"); 
+    err = WaitFor(">",2);
+    if(err > 0)
+      return err; 
+
+#define ROLLER_ACCEPT "Accept: text/html,application/json"
+#define ROLLER_ACCEPT_LA "Accept-Language: en-US"
+#define ROLLER_CTT_TYPE "Content-Type: application/json"
+#define ROLLER_CONNECTION "Connection: keep-alive"
+#define ROLLER_USER_AGENT2 "User-Agent: JackBian"
+#define ROLLER_SEND_DATA "{\"DATA\":[{\"pn\":\"18802150339\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"80\", \"OBDCS\":\"60\", \"OBDSW\":\"20\", \"OBDKQLL\":\"30\", \"OBDQGJDYL\":\"20\", \"OBDJQMKD\":\"10\", \"OBDYNDCGQZ\":\"15\", \"OBDFHBFB\":\"30\", \"CNWD\":\"25\", \"CNYNN\":\"20\"},{\"bookdata\":\"0\"}]}\r\n" 
+
+    sprintf((char*)gsm_snd_datas, 
+      "POST %s %s\r\n%s\r\n%s\r\nContent-Length: %d\r\n%s\r\n%s\r\nHost: %s:80\r\n%s\r\n\r\n%s",
+      ROLLER_ADDR2,
+      ROLLER_HTTP_PROTOCOL,
+      ROLLER_ACCEPT,
+      ROLLER_ACCEPT_LA,
+      strlen(ROLLER_SEND_DATA),
+      ROLLER_CTT_TYPE,
+      ROLLER_CONNECTION,
+      ROLLER_HOST,  
+      ROLLER_USER_AGENT2,
+      ROLLER_SEND_DATA
+      );
+
+    GSM_SendATData(gsm_snd_datas);
+    err = WaitFor("SEND OK",2);
+    if(err > 0)
+      return err;     
+  }
+  else
+  {
+    ERROR("No Cookie \r\n");
+  }
+
+  return err;
+
+}
+
 /* timeout seconds */
-uint8_t GSM_WaitString(uint8_t *p, uint8_t timeout)
+uint8_t WaitFor(uint8_t *p, uint32_t timeout)
 {
   char *p_find = NULL;
-  uint8_t cnt = 0;
+  uint32_t cnt = 0;
   uint8_t err = 1;
 
   SysTick_Delay_ms(100);
   timeout *= 10;
   while(cnt < timeout)
   {
-    if(gsm_res_cnt > 0)
+    if(gsm_rcv_data_cnt > 0)
     {
-      p_find = strstr((char*)gsm_datas, (char*)p);
+      p_find = strstr((char*)gsm_rcv_datas, (char*)p);
       if(NULL != p_find)
       {
         err = 0;
@@ -265,26 +425,14 @@ uint8_t GSM_WaitString(uint8_t *p, uint8_t timeout)
     cnt++;
   }
 
-  //PrintData();
   return err;
 } 
-
-
-static void PrintData(void)
-{
-  uint16_t i = 0;
-  /* output response */
-  DEBUG("\r\n------------------\r\n ");
-  for(i=0;i<gsm_res_cnt;i++)
-    DEBUG("%c",gsm_datas[i]);
-  DEBUG("\r\n------------------\r\n ");
-}
 
 static void DataReset(void)
 {
   /* reset status */
-  gsm_res_cnt=0;
-  memset(gsm_datas, 0x00, GSM_MAX_DATA_SIZE);
+  gsm_rcv_data_cnt=0;
+  memset(gsm_rcv_datas, 0x00, GSM_MAX_DATA_SIZE);
 }
 
 /* Signal Quality Report 
@@ -317,7 +465,7 @@ static uint8_t ParserCSQ(void)
   uint8_t err = 0;
   char *p = NULL;  
   
-  p = strchr((char *)gsm_datas, ':'); 
+  p = strchr((char *)gsm_rcv_datas, ':'); 
   for(i = 0; i < 5; i++)
   {
     p++;
@@ -330,7 +478,7 @@ static uint8_t ParserCSQ(void)
       break;
   }
 
-  p = strchr((char *)gsm_datas, ','); 
+  p = strchr((char *)gsm_rcv_datas, ','); 
   for(i = 0; i < 10; i++)
   {
     p++;
@@ -357,6 +505,80 @@ static uint8_t ParserCSQ(void)
   }
 
   return err;
+}
+
+static uint8_t ParserCookie(uint32_t timeout)
+{
+  char *p_find = NULL;
+  uint32_t cnt = 0;
+  uint8_t err = 1;
+	uint8_t i = 0;
+
+  SysTick_Delay_ms(100);
+  timeout *= 10;
+  while(cnt < timeout)
+  {
+    //DEBUG("gsm_rcv_datas=%s\r\n", gsm_rcv_datas);
+    if(gsm_rcv_data_cnt > 0)
+    {
+      p_find = strstr((char *)gsm_rcv_datas, "Set-Cookie:"); 
+      if(NULL != p_find)
+      {
+        err = 0;
+        while(*p_find != ':') p_find++;
+        p_find++;
+        for(i = 0; i < 50; i++)
+        {
+          if(*p_find == ';')
+            break;
+          else
+            cookie[i] = *p_find;
+
+          p_find++;
+        }  
+
+        //DEBUG("cookie=%s\r\n", cookie);
+        break;
+      }
+    }
+    SysTick_Delay_ms(100);
+    cnt++;
+  }
+
+
+  return err;
+}
+
+static uint8_t ParserLocation(void)
+{
+  char *p_find = NULL;
+  uint8_t err = 1;
+	uint8_t i;
+
+  p_find = strchr((char *)gsm_rcv_datas, ',');
+  for(i = 0; i < 16; i++)
+  {
+    p_find++;
+    if(*p_find == ',')
+      break;
+    else
+      longitude[i] = *p_find;
+  }  
+
+  for(i = 0; i < 16; i++)
+  {
+    p_find++;
+    if(*p_find == ',')
+      break;
+    else
+      latitude[i] = *p_find;
+  } 
+
+  if(longitude[0] != 0 && latitude[0] != 0)
+    err = 0;
+  
+  return err;
+
 }
 
 

@@ -35,7 +35,6 @@ static void INIT_All(void);
 int main(void)
 {	
 	uint8_t err = 1;
-  uint8_t i = 0;
 	
 	INIT_All();
 
@@ -45,15 +44,13 @@ int main(void)
   else
     ERROR("\r\n GSM Power ON failed!");
 
-  while(GSM_GPRSConnect())
-  {
-    i++;
-    if(i > 2)
-    {
-      ERROR("\r\n GSM_GPRSConnect failed!");
-      break;
-    }
-  }
+	err = GSM_GPRSConnect();
+  if(0 == err)
+    INFO("\r\n GPRS connection OK!");
+  else
+    ERROR("\r\n GPRS connection failed!");
+  GSM_Location();
+  GSM_GPRSSendData();
   
 	for(;;)
 	{   
