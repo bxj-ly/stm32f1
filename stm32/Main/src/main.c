@@ -35,62 +35,66 @@ static void INIT_All(void);
 int main(void)
 {	
 	uint8_t err = 1;
-	
+
 	INIT_All();
 
 	err = GSM_PowerOn();
-  if(0 == err)
-    INFO("\r\n GSM Power ON!");
-  else
-    ERROR("\r\n GSM Power ON failed!");
+	if(0 == err)
+		INFO("\r\n GSM Power ON!");
+	else
+		ERROR("\r\n GSM Power ON failed!");
 
 	err = GSM_GPRSConnect();
-  if(0 == err)
-    INFO("\r\n GPRS connection OK!");
-  else
-    ERROR("\r\n GPRS connection failed!");
-  GSM_Location();
-  GSM_GPRSSendData();
-  
+	if(0 == err)
+		INFO("\r\n GPRS connection OK!");
+	else
+		ERROR("\r\n GPRS connection failed!");
+	
+	GSM_Location();
+	GSM_GPRSSendData();
+
 	for(;;)
 	{   
-	  /* LED twinkles */
-    if(TIM2_Is_1s())
-    {
-      DBG_LED1_ON();
-      SysTick_Delay_ms(100);
-      DBG_LED1_OFF();
-
-      DEBUG_MonitorState();      
-    }
-  }
+		/* LED twinkles */
+        #define TWINKLE_INTERVAL 2000
+		if(TIM2_Ms_Cycle(TWINKLE_INTERVAL)){
+			DBG_LED1_ON();
+   
+		}
+        if(TIM2_Ms_Half(TWINKLE_INTERVAL)){
+            DBG_LED1_OFF();
+			DEBUG_MonitorState();    
+        }
+        
+        // TODO: message retreat middle layer 
+        //       polling buffers
+        //       Error and warning Monitor to USART1 
+        
+	}
   
 }
 
 static void INIT_All(void) 
 {
-  RCC_Configuration();
-  NVIC_Configuration();
-  GPIO_Configuration(); 
+    RCC_Configuration();
+    NVIC_Configuration();
+    GPIO_Configuration(); 
 
-  USART1_Config();
-  /* I don't know why. 
-  We need to add delay here to avoid messy codes on console. */
-	SysTick_Delay_ms(1000); 
-  UART4_Config();
+    USART1_Config();
+    UART4_Config();
 
-  TIM2_Init();
+    TIM2_Init();
 
-  DBG_LED1_OFF();
-  DBG_LED2_OFF();
-	USART1_DMA_Config();
-	UART4_DMA_Config();  
-  INFO("\r\n");
-  INFO("***********************************************\r\n"); 
-  INFO("*                                             *\r\n"); 
-  INFO("*  HWYTREE - Innovation meets quality! Y^_^Y  *\r\n"); 
-  INFO("*                                             *\r\n"); 
-  INFO("***********************************************\r\n"); 
+    DBG_LED1_OFF();
+    DBG_LED2_OFF();
+    USART1_DMA_Config();
+    UART4_DMA_Config();  
+    INFO("\r\n");
+    INFO("***********************************************\r\n"); 
+    INFO("*                                             *\r\n"); 
+    INFO("*  HWYTREE - Innovation meets quality! Y^_^Y  *\r\n"); 
+    INFO("*                                             *\r\n"); 
+    INFO("***********************************************\r\n"); 
 }
 
 

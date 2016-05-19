@@ -30,9 +30,21 @@ static uint8_t uart1_dma_receivebuffer[UART1_DMA_RCVBUFFER_SIZE];
 static uint8_t uart1_dma_sendbuffer[UART1_DMA_SENDBUFF_SIZE];
 static uint32_t dma15_len = 0;
 
-static void USART1_TX_DMA_INIT(void);
-static void USART1_RX_DMA_INIT(void);
 
+
+void USART1_NVIC_Config(void){
+	
+    NVIC_InitTypeDef NVIC_InitStructure; 
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+
+    NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+
+    USART_ITConfig(USART1, USART_IT_IDLE, ENABLE);
+}	
 /* USART1 Config
 - BaudRate = 115200 baud
 - Word Length = 8 Bits
@@ -43,46 +55,51 @@ static void USART1_RX_DMA_INIT(void);
 */
 void USART1_Config(void)
 {
-  USART_InitTypeDef USART_InitStructure;
+    USART_InitTypeDef USART_InitStructure;
 
- 
-  GPIO_PinRemapConfig(GPIO_Remap_USART1, ENABLE);  
 
-  /* USART1 mode config */
-  USART_InitStructure.USART_BaudRate = 115200;
-  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  USART_InitStructure.USART_StopBits = USART_StopBits_1;
-  USART_InitStructure.USART_Parity = USART_Parity_No ;
-  USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
-  USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
-  USART_Init(USART1, &USART_InitStructure); 
-  //USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
-  USART_Cmd(USART1, ENABLE);
+    GPIO_PinRemapConfig(GPIO_Remap_USART1, ENABLE);  
 
-  USART_ITConfig(USART1, USART_IT_IDLE, ENABLE);
+    /* USART1 mode config */
+    USART_InitStructure.USART_BaudRate = 115200;
+    USART_InitStructure.USART_WordLength = USART_WordLength_8b;
+    USART_InitStructure.USART_StopBits = USART_StopBits_1;
+    USART_InitStructure.USART_Parity = USART_Parity_No ;
+    USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
+    USART_InitStructure.USART_Mode = USART_Mode_Rx | USART_Mode_Tx;
+    USART_Init(USART1, &USART_InitStructure); 
+
+    USART_Cmd(USART1, ENABLE);
+
+    USART1_NVIC_Config();
 
 }
 
-void USART1_DMA_Config(void)
-{
-	USART1_TX_DMA_INIT();
-	USART1_RX_DMA_INIT();
-}
 
-void USART1_TX_DMA_SEND(void * src, size_t len)
+
+int USART1_TX_DMA_SEND(void * src, size_t len)
 {
-  memcpy(uart1_dma_sendbuffer, src, len);
-  DMA_SetCurrDataCounter(DMA1_Channel4, len);
-  DMA_Cmd (DMA1_Channel4,ENABLE);		
+    #define MAX_FAIL_TIME 100000
+    int failcnt = 0;
+#if 0
+    // wait for last dma tx finished
+    for(failcnt = 0;failcnt < MAX_FAIL_TIME; failcnt ++)
+        if(!DMA1_Channel4->CCR & DMA_CCR1_EN)
+            break;
+#endif
+    memcpy(uart1_dma_sendbuffer, src, len);
+    DMA_SetCurrDataCounter(DMA1_Channel4, len);
+    DMA_Cmd (DMA1_Channel4,ENABLE);	
+    return failcnt;
 }
 
 int fputc(int ch, FILE *f)
 {
-  while (!(USART1->SR & USART_FLAG_TXE));
+    while (!(USART1->SR & USART_FLAG_TXE));
 
-  USART_SendData(USART1, (unsigned char) ch);
-  while (!(USART1->SR & USART_FLAG_TXE)); 
-  return (ch);
+    USART_SendData(USART1, (unsigned char) ch);
+    while (!(USART1->SR & USART_FLAG_TXE)); 
+    return (ch);
 }
 
 /******************************************************************************/
@@ -93,25 +110,27 @@ int fputc(int ch, FILE *f)
 /******************************************************************************/
 void USART1_IRQHandler(void)
 {
-  uint8_t c;
-  DEBUG_SetUSART1IntCnt();
+    uint8_t c;
+    DEBUG_SetUSART1IntCnt();
 
-  if(USART_GetITStatus(USART1, USART_IT_IDLE) != RESET)
-  {
-    c=USART1->SR;
-    c=USART1->DR;
-         
-    dma15_len = DMA_GetCurrDataCounter(DMA1_Channel5);
-    if(DEBUG_GetPlayMode() == SYS_MODE_ECHO){
-      USART1_TX_DMA_SEND(uart1_dma_receivebuffer, (size_t)(UART1_DMA_RCVBUFFER_SIZE - dma15_len));
+    if(USART_GetITStatus(USART1, USART_IT_IDLE) != RESET)
+    {
+        c=USART1->SR;
+        c=USART1->DR;
+
+        dma15_len = DMA_GetCurrDataCounter(DMA1_Channel5);
+        if(DEBUG_GetPlayMode() & SYS_MODE_ECHO){
+            USART1_TX_DMA_SEND(uart1_dma_receivebuffer, (size_t)(UART1_DMA_RCVBUFFER_SIZE - dma15_len));
+        }
+        if(DEBUG_GetPlayMode() & SYS_MODE_1TH4){
+            UART4_TX_DMA_SEND(uart1_dma_receivebuffer, (size_t)(UART1_DMA_RCVBUFFER_SIZE - dma15_len));
+        }
+
+        DMA_Cmd(DMA1_Channel5, DISABLE); 
+        DMA_SetCurrDataCounter(DMA1_Channel5, UART1_DMA_RCVBUFFER_SIZE);
+        DMA_Cmd(DMA1_Channel5, ENABLE); 
+
     }
-    UART4_TX_DMA_SEND(uart1_dma_receivebuffer, (size_t)(UART1_DMA_RCVBUFFER_SIZE - dma15_len));
-    
-    DMA_Cmd(DMA1_Channel5, DISABLE); 
-    DMA_SetCurrDataCounter(DMA1_Channel5, UART1_DMA_RCVBUFFER_SIZE);
-    DMA_Cmd(DMA1_Channel5, ENABLE); 
-  
-  }
   
   if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
   {   
@@ -165,7 +184,21 @@ void DMA1_Channel5_IRQHandler(void)
 	}		
 }
 
-static void USART1_TX_DMA_INIT(void)
+void USART1_TX_DMA_NVIC_Config(void){
+	
+    NVIC_InitTypeDef NVIC_InitStructure; 
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);	
+    
+    NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel4_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+
+    DMA_ITConfig(DMA1_Channel4,DMA_IT_TC,ENABLE);
+}
+	
+static void USART1_TX_DMA_Init(void)
 {
 	DMA_InitTypeDef DMA_InitStructure;
 
@@ -182,37 +215,53 @@ static void USART1_TX_DMA_INIT(void)
 	DMA_InitStructure.DMA_Priority = DMA_Priority_Medium;  
 	DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;   
 	DMA_Init(DMA1_Channel4, &DMA_InitStructure); 	
-	DMA_Cmd (DMA1_Channel4,DISABLE);
-				
+    DMA_Cmd (DMA1_Channel4,DISABLE);				
 	USART_DMACmd(USART1, USART_DMAReq_Tx, ENABLE);		
 		
-	DMA_ITConfig(DMA1_Channel4,DMA_IT_TC,ENABLE);  
+    USART1_TX_DMA_NVIC_Config();
 }
 
-static void USART1_RX_DMA_INIT(void)
+void USART1_RX_DMA_NVIC_Config(void){
+    NVIC_InitTypeDef NVIC_InitStructure; 
+    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);	    
+
+    NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel5_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);	
+
+    DMA_ITConfig(DMA1_Channel5, DMA_IT_TC | DMA_IT_HT , ENABLE); 	   
+}
+
+static void USART1_RX_DMA_Init(void)
 {
 	DMA_InitTypeDef DMA_InitStructure;
 
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);	
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
 	
-  DMA_DeInit(DMA1_Channel5); 
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR; 
-  DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)uart1_dma_receivebuffer;  
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC; 
-  DMA_InitStructure.DMA_BufferSize = UART1_DMA_RCVBUFFER_SIZE; 
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable; 
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable; 
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte; 
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_PeripheralDataSize_Byte; 
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Circular; 
-  DMA_InitStructure.DMA_Priority = DMA_Priority_High; 
-  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-  DMA_Init(DMA1_Channel5, &DMA_InitStructure);   
-  DMA_Cmd(DMA1_Channel5, ENABLE); 	
-	USART_DMACmd(USART1, USART_DMAReq_Rx, ENABLE);
+    DMA_DeInit(DMA1_Channel5); 
+    DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR; 
+    DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)uart1_dma_receivebuffer;  
+    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC; 
+    DMA_InitStructure.DMA_BufferSize = UART1_DMA_RCVBUFFER_SIZE; 
+    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable; 
+    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable; 
+    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte; 
+    DMA_InitStructure.DMA_MemoryDataSize = DMA_PeripheralDataSize_Byte; 
+    DMA_InitStructure.DMA_Mode = DMA_Mode_Circular; 
+    DMA_InitStructure.DMA_Priority = DMA_Priority_High; 
+    DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+    DMA_Init(DMA1_Channel5, &DMA_InitStructure);   
+    DMA_Cmd(DMA1_Channel5, ENABLE); 	
+    USART_DMACmd(USART1, USART_DMAReq_Rx, ENABLE);
 
-	DMA_ITConfig(DMA1_Channel5, DMA_IT_TC | DMA_IT_HT , ENABLE); 	
+    USART1_RX_DMA_NVIC_Config();
 }
 
-
+void USART1_DMA_Config(void)
+{
+	USART1_TX_DMA_Init();
+	USART1_RX_DMA_Init();
+}

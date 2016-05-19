@@ -7,7 +7,7 @@
 
 void USART1_Config(void);
 void USART1_DMA_Config(void);
-void USART1_TX_DMA_SEND(void * src, size_t len);
+int USART1_TX_DMA_SEND(void * src, size_t len);
 int fputc(int ch, FILE *f);
 
 #endif /* __USART1_H */

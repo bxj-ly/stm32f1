@@ -23,13 +23,89 @@
 #include "uart4.h"
 #include "gsm.h"
 
-#define START_TIME  tim2_ms_ticks=0;RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 , ENABLE);TIM_Cmd(TIM2, ENABLE)
-#define STOP_TIME  TIM_Cmd(TIM2, DISABLE);RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 , DISABLE)
+#define START_TIME() {\
+    tim2_ms_ticks=0;\
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 , ENABLE); \
+    TIM_Cmd(TIM2, ENABLE);\
+}
+#define STOP_TIME() {\
+    TIM_Cmd(TIM2, DISABLE);\
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 , DISABLE);\
+}
 
 static __IO uint32_t tim2_ms_ticks;
 
-static void TIM2_NVIC_Configuration(void);
-static void TIM2_Configuration(void);
+
+static __IO uint32_t tim2_1s_chcnt;
+static __IO uint32_t tim2_hs_chcnt;
+
+void TIM2_clear_cnts(void){
+    tim2_1s_chcnt = 0;
+    tim2_hs_chcnt = 0;
+}
+
+
+uint32_t TIM2_Ms_Cycle(uint32_t interval)
+{
+    tim2_1s_chcnt ++;
+    if((tim2_ms_ticks % interval) == 0 && tim2_1s_chcnt == 1) {
+        return 1;
+    }
+    return 0;
+}
+
+
+uint8_t TIM2_Ms_Half(uint32_t interval)
+{
+    tim2_hs_chcnt ++;
+    if((tim2_ms_ticks % interval) == (interval/2) && tim2_hs_chcnt == 1) {
+        return 1;
+    }
+    return 0;
+}
+
+
+void TIM2_IRQHandler(void)
+{
+    if(TIM_GetITStatus(TIM2 , TIM_IT_Update) != RESET) 
+    {	
+        TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update); 
+        TIM2_clear_cnts();
+        tim2_ms_ticks++;
+    }
+}
+
+static void TIM2_NVIC_Configuration(void)
+{
+      NVIC_InitTypeDef NVIC_InitStructure; 
+      
+      NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0); 
+      NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+      NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+      NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+      NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+      NVIC_Init(&NVIC_InitStructure);
+}
+
+
+/*TIM_Period--1000   TIM_Prescaler--71 --> 1ms*/
+static void TIM2_Configuration(void)
+{
+      TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+      RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 , ENABLE);
+      TIM_DeInit(TIM2);
+      TIM_TimeBaseStructure.TIM_Period=1000;
+      TIM_TimeBaseStructure.TIM_Prescaler= (72 - 1); /* 72M/72 */
+      TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
+      TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
+      TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+      TIM_ClearFlag(TIM2, TIM_FLAG_Update);
+      TIM_ITConfig(TIM2,TIM_IT_Update,ENABLE);
+      TIM_Cmd(TIM2, ENABLE);
+      
+      RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 , DISABLE); 
+}
+
 void TIM2_Init(void)
 {
 	/* TIM2 config */
@@ -37,78 +113,5 @@ void TIM2_Init(void)
   TIM2_Configuration();
 
   /* TIM2 start */
-  START_TIME; 
+  START_TIME(); 
 }
-
-uint8_t TIM2_Is_10ms(void)
-{
-  if((tim2_ms_ticks % 10) == 0)
-  {
-    return 1;
-  }
-
-  return 0;
-}
-
-uint8_t TIM2_Is_100ms(void)
-{
-  if((tim2_ms_ticks % 100) == 0)
-  {
-    return 1;
-  }
-
-  return 0;
-}
-
-uint8_t TIM2_Is_1s(void)
-{
-  if(tim2_ms_ticks >= 1000) /* 1s */
-  {
-    tim2_ms_ticks = 0;
-    return 1;
-  }
-
-  return 0;
-}
-
-void TIM2_IRQHandler(void)
-{
-	if(TIM_GetITStatus(TIM2 , TIM_IT_Update) != RESET) 
-	{	
-		TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update);    
-  	tim2_ms_ticks++;
-	}
-}
-
-static void TIM2_NVIC_Configuration(void)
-{
-  NVIC_InitTypeDef NVIC_InitStructure; 
-  
-  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0); 
-  NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
-}
-
-
-/*TIM_Period--1000   TIM_Prescaler--71 --> 1ms*/
-static void TIM2_Configuration(void)
-{
-  TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 , ENABLE);
-  TIM_DeInit(TIM2);
-  TIM_TimeBaseStructure.TIM_Period=1000;
-  TIM_TimeBaseStructure.TIM_Prescaler= (72 - 1); /* 72M/72 */
-  TIM_TimeBaseStructure.TIM_ClockDivision=TIM_CKD_DIV1;
-  TIM_TimeBaseStructure.TIM_CounterMode=TIM_CounterMode_Up;
-  TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
-  TIM_ClearFlag(TIM2, TIM_FLAG_Update);
-  TIM_ITConfig(TIM2,TIM_IT_Update,ENABLE);
-  TIM_Cmd(TIM2, ENABLE);
-  
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2 , DISABLE); 
-}
-
-

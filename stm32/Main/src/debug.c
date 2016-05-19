@@ -28,7 +28,7 @@ static uint32_t debug_dma2_channel3_int_cnt = 0;
 static uint32_t debug_dma2_channel5_int_cnt = 0;
 
 static uint32_t play_stage = 0;
-static uint32_t play_mode = SYS_MODE_ECHO; //  SYS_MODE_ECHO| SYS_MODE_MON_PRT;
+static uint32_t play_mode = SYS_MODE_ECHO | SYS_MODE_1TH4 | SYS_MODE_MON_PRT;//| SYS_MODE_MON_PRT ; //  SYS_MODE_ECHO
 
 uint32_t DEBUG_GetUSART1IntCnt(void)
 {
@@ -98,6 +98,12 @@ void  DEBUG_SetPlayMode(uint32_t mode)
 {
   play_mode = mode;
 }
+void DEBUG_AddPlayMode(uint32_t mode){
+	play_mode |= mode;
+}
+void DEBUG_RemovePlayMode(uint32_t mode){
+	play_mode &= ~mode;
+}
 
 uint32_t  DEBUG_GetPlayStage(void)
 {
@@ -114,7 +120,7 @@ void DEBUG_MonitorState(void)
   {
   
     printf("play_mode=0x%x, play_stage=%d\r\n", play_mode, play_stage);
-    printf("cnt_int1=%d , cnt_int4=%d \r\n",debug_usart1_int_cnt, debug_uart4_int_cnt);
+    printf("debug_usart1_int_cnt=%d , debug_uart4_int_cnt=%d \r\n",debug_usart1_int_cnt, debug_uart4_int_cnt);
     printf("cnt_dma14=%d , cnt_dma15=%d , cnt_dma23=%d , cnt_dma25=%d \r\n", debug_dma1_channel4_int_cnt , debug_dma1_channel5_int_cnt, debug_dma2_channel3_int_cnt, debug_dma2_channel5_int_cnt);
 //    printf("uart1_dma_sendbuffer = %s, uart1_dma_receivebuffer = %s\r\n",uart1_dma_sendbuffer, uart1_dma_receivebuffer);
   }

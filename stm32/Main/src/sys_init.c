@@ -207,6 +207,7 @@ void GPIO_Configuration(void)
 
 void NVIC_Configuration(void)
 {
+#if 0    
   NVIC_InitTypeDef NVIC_InitStructure; 
 
   /* Configure the NVIC Preemption Priority Bits */  
@@ -226,6 +227,13 @@ void NVIC_Configuration(void)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);  
 
+  /*Enable DMA1 Channel4 Interrupt */
+  NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel4_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);	
+	
   /*Enable DMA1 Channel5 Interrupt */
   NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel5_IRQn;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
@@ -240,19 +248,13 @@ void NVIC_Configuration(void)
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&NVIC_InitStructure);
 
-  /*Enable DMA1 Channel4 Interrupt */
-  NVIC_InitStructure.NVIC_IRQChannel = DMA1_Channel4_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
-
   /*Enable DMA2 Channel5 Interrupt */
   NVIC_InitStructure.NVIC_IRQChannel = DMA2_Channel5_IRQn;
   NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
   NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
   NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);    
+  NVIC_Init(&NVIC_InitStructure);  
+ #endif 
 }
 
 
