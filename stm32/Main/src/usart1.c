@@ -24,11 +24,7 @@
 #include "uart4.h"
 #include "debug.h"
 
-#define UART1_DMA_RCVBUFFER_SIZE 1024
-#define UART1_DMA_SENDBUFF_SIZE 1024 
-static uint8_t uart1_dma_receivebuffer[UART1_DMA_RCVBUFFER_SIZE];
-static uint8_t uart1_dma_sendbuffer[UART1_DMA_SENDBUFF_SIZE];
-static uint32_t dma15_len = 0;
+uint8_t uart1_dma_receivebuffer[UART1_DMA_RCVBUFFER_SIZE];
 
 
 
@@ -77,17 +73,15 @@ void USART1_Config(void)
 
 
 
-int USART1_TX_DMA_SEND(void * src, size_t len)
+int USART1_TX_DMA_Send(void * src, size_t len)
 {
     #define MAX_FAIL_TIME 100000
     int failcnt = 0;
-#if 0
     // wait for last dma tx finished
-    for(failcnt = 0;failcnt < MAX_FAIL_TIME; failcnt ++)
-        if(!DMA1_Channel4->CCR & DMA_CCR1_EN)
-            break;
-#endif
-    memcpy(uart1_dma_sendbuffer, src, len);
+    while(DMA1_Channel4->CCR & DMA_CCR1_EN && failcnt++<MAX_FAIL_TIME);
+    
+
+    DMA1_Channel4->CMAR = (uint32_t)src;
     DMA_SetCurrDataCounter(DMA1_Channel4, len);
     DMA_Cmd (DMA1_Channel4,ENABLE);	
     return failcnt;
@@ -96,11 +90,14 @@ int USART1_TX_DMA_SEND(void * src, size_t len)
 int fputc(int ch, FILE *f)
 {
     while (!(USART1->SR & USART_FLAG_TXE));
-
     USART_SendData(USART1, (unsigned char) ch);
     while (!(USART1->SR & USART_FLAG_TXE)); 
     return (ch);
 }
+
+
+
+
 
 /******************************************************************************/
 /*                 STM32F10x Peripherals Interrupt Handlers                   */
@@ -110,50 +107,22 @@ int fputc(int ch, FILE *f)
 /******************************************************************************/
 void USART1_IRQHandler(void)
 {
-    uint8_t c;
     DEBUG_SetUSART1IntCnt();
 
     if(USART_GetITStatus(USART1, USART_IT_IDLE) != RESET)
     {
-        c=USART1->SR;
-        c=USART1->DR;
-
-        dma15_len = DMA_GetCurrDataCounter(DMA1_Channel5);
-        if(DEBUG_GetPlayMode() & SYS_MODE_ECHO){
-            USART1_TX_DMA_SEND(uart1_dma_receivebuffer, (size_t)(UART1_DMA_RCVBUFFER_SIZE - dma15_len));
-        }
-        if(DEBUG_GetPlayMode() & SYS_MODE_1TH4){
-            UART4_TX_DMA_SEND(uart1_dma_receivebuffer, (size_t)(UART1_DMA_RCVBUFFER_SIZE - dma15_len));
-        }
-
-        DMA_Cmd(DMA1_Channel5, DISABLE); 
-        DMA_SetCurrDataCounter(DMA1_Channel5, UART1_DMA_RCVBUFFER_SIZE);
-        DMA_Cmd(DMA1_Channel5, ENABLE); 
+        USART1->SR;
+        USART1->DR;
+        //USART1_RX_MSG_Proc();
 
     }
-  
-  if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
-  {   
-    c=USART1->DR;
-#if 0		
-    if(c==':') play_stage = 1;
-    else if (c=='>' && play_stage == 1) play_stage = 2;
-    else if(play_stage == 2 && c >= '0' && c < '9'){
-      play_mode |= (uint32_t)0x00000001 << (c - '0');
-      play_stage += 2;
+    // after start dma , will not use RXNE interrupt
+    if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)
+    {   
+
+        //dma15_len = DMA_GetCurrDataCounter(DMA1_Channel5);
+        //INFO("%c",c);
     }
-    else if (c=='<' && play_stage == 1) play_stage = 3;
-    else if(play_stage == 3 && c >= '0' && c < '9'){
-      play_mode &= ~((uint32_t)0x00000001 << (c - '0'));
-      play_stage += 2;
-    }
-    else
-      play_stage = 0;
-#endif
-    
-    dma15_len = DMA_GetCurrDataCounter(DMA1_Channel5);
-    //INFO("%c",c);
-  }
 
 }
 
@@ -204,9 +173,9 @@ static void USART1_TX_DMA_Init(void)
 
 	DMA_DeInit(DMA1_Channel4); 
 	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&USART1->DR;	   
-	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)uart1_dma_sendbuffer;
+    DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)0;
 	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;	
-	DMA_InitStructure.DMA_BufferSize = UART1_DMA_SENDBUFF_SIZE;   
+	DMA_InitStructure.DMA_BufferSize = 0;   
 	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable; 
 	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;	
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;

@@ -26,6 +26,7 @@
 #define SYS_MODE_MON_PRT		((uint32_t)0x00000001 << 1) 
 #define SYS_MODE_1TH4  			((uint32_t)0x00000001 << 2) 
 #define SYS_MODE_MON4  			((uint32_t)0x00000001 << 3) 
+#define SYS_MODE_AUTO_CONN      ((uint32_t)0x00000001 << 4)
 
 uint32_t DEBUG_GetUSART1IntCnt(void);
 void DEBUG_SetUSART1IntCnt(void);
@@ -39,8 +40,14 @@ uint32_t DEBUG_GetDMA2Channel3IntCnt(void);
 void DEBUG_SetDMA2Channel3IntCnt(void);
 uint32_t DEBUG_GetDMA2Channel5IntCnt(void);
 void DEBUG_SetDMA2Channel5IntCnt(void);
+
+
 uint32_t DEBUG_GetPlayMode(void);
 void  DEBUG_SetPlayMode(uint32_t mode);
+void DEBUG_AddPlayMode(uint32_t mode);
+void DEBUG_RemovePlayMode(uint32_t mode);
+
+
 uint32_t  DEBUG_GetPlayStage(void);
 void  DEBUG_SetPlayStage(uint32_t stage);
 void DEBUG_MonitorState(void);

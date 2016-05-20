@@ -27,10 +27,9 @@
 #include "debug.h"
 #include "gsm.h"
 
-#define UART4_DMA_RCVBUFFER_SIZE 1024
-#define UART4_DMA_SENDBUFF_SIZE 1024 
-static uint8_t uart4_dma_receivebuffer[UART4_DMA_RCVBUFFER_SIZE];
-static uint8_t uart4_dma_sendbuffer[UART4_DMA_SENDBUFF_SIZE];
+
+uint8_t uart4_dma_receivebuffer[UART4_DMA_RCVBUFFER_SIZE];
+//static uint8_t uart4_dma_sendbuffer[UART4_DMA_SENDBUFF_SIZE];
 
 void UART4_NVIC_Config(void){
     NVIC_InitTypeDef NVIC_InitStructure; 
@@ -82,25 +81,30 @@ void UART4_SendByte(uint8_t data)
    while (!(UART4->SR & USART_FLAG_TC));   
 }
 
-void UART4_TX_DMA_SEND(void * src, size_t len)
+void UART4_TX_DMA_Send(void * src, size_t len)
 {
-		memcpy(uart4_dma_sendbuffer, src, len);
-		DMA_SetCurrDataCounter(DMA2_Channel5, len);
-		DMA_Cmd (DMA2_Channel5,ENABLE);		
+    #define MAX_FAIL_TIME 100000
+    int failcnt = 0;
+    // wait for last dma tx finished
+    while(DMA2_Channel5->CCR & DMA_CCR1_EN && failcnt++<MAX_FAIL_TIME);
+    
+    DMA2_Channel5->CMAR = (uint32_t)src;
+    DMA_SetCurrDataCounter(DMA2_Channel5, len);
+    DMA_Cmd (DMA2_Channel5,ENABLE);		
 }
+
 
 void UART4_IRQHandler(void)
 {
 	uint8_t c;
-	uint16_t rec_len = 0;
 	DEBUG_SetUART4IntCnt();
 
 	if(USART_GetITStatus(UART4, USART_IT_RXNE) != RESET)
 	{ 	
 		if(DEBUG_GetPlayMode() & SYS_MODE_MON4)
 		{
-	    c=UART4->DR;
-	  	INFO("%c",c);    
+            c=UART4->DR;
+            INFO("%c",c);    
 		}
 	} 
 	if(USART_GetITStatus(UART4, USART_IT_IDLE) != RESET)
@@ -108,14 +112,7 @@ void UART4_IRQHandler(void)
         c=UART4->SR;
         c=UART4->DR;
 
-        rec_len = DMA_GetCurrDataCounter(DMA2_Channel3);
-        GSM_RetrieveData(uart4_dma_receivebuffer, (size_t)(UART4_DMA_RCVBUFFER_SIZE - rec_len));
-        if(DEBUG_GetPlayMode() & SYS_MODE_1TH4){
-            USART1_TX_DMA_SEND(uart4_dma_receivebuffer, (size_t)(UART4_DMA_RCVBUFFER_SIZE - rec_len));
-        }    
-        DMA_Cmd(DMA2_Channel3, DISABLE); 
-        DMA_SetCurrDataCounter(DMA2_Channel3, UART4_DMA_RCVBUFFER_SIZE);
-        DMA_Cmd(DMA2_Channel3, ENABLE); 		
+		//UART4_RX_MSG_Proc();
 
 	}
 }
@@ -168,9 +165,9 @@ static void UART4_TX_DMA_Init(void)
 
 	DMA_DeInit(DMA2_Channel5); 
 	DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)&UART4->DR;	   
-	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)uart4_dma_sendbuffer;
+	DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)0;
 	DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;	
-	DMA_InitStructure.DMA_BufferSize = UART4_DMA_SENDBUFF_SIZE;   
+	DMA_InitStructure.DMA_BufferSize = 0;   
 	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable; 
 	DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;	
 	DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;

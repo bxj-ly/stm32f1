@@ -28,7 +28,7 @@ static uint32_t debug_dma2_channel3_int_cnt = 0;
 static uint32_t debug_dma2_channel5_int_cnt = 0;
 
 static uint32_t play_stage = 0;
-static uint32_t play_mode = SYS_MODE_ECHO | SYS_MODE_1TH4 | SYS_MODE_MON_PRT;//| SYS_MODE_MON_PRT ; //  SYS_MODE_ECHO
+static uint32_t play_mode =  SYS_MODE_ECHO |SYS_MODE_1TH4 ;//| SYS_MODE_MON_PRT;//| SYS_MODE_MON_PRT ; //  SYS_MODE_ECHO 
 
 uint32_t DEBUG_GetUSART1IntCnt(void)
 {
