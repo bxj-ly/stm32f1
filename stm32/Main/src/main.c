@@ -29,123 +29,110 @@
 #include "uart4.h"
 #include "gsm.h"
 #include "gps.h"
+#include "lmp91000.h"
+#include "beeper.h"
 
 static void INIT_All(void);
-
-
-void Check_PlayMode_Cmd(char * cmd)
-{
-    
-    if(cmd[0]==':'){
-        printf("\r\n:");
-        if (cmd[1]=='>' ) {
-            if(cmd[2] >= '0' && cmd[2] < '9'){
-                DEBUG_AddPlayMode( (uint32_t)0x00000001 << (cmd[2] - '0'));
-                printf("Add PlayMode %c, Current Mode : %d\r\n", cmd[2], DEBUG_GetPlayMode());
-            }
-        }
-        else if (cmd[1]=='<' ) {
-            if(cmd[2] >= '0' && cmd[2] < '9'){
-                DEBUG_RemovePlayMode( (uint32_t)0x00000001 << (cmd[2] - '0'));
-                printf("Remove PlayMode %c, Current Mode : %d\r\n", cmd[2], DEBUG_GetPlayMode());
-            }
-        }
-        else if(cmd[1]=='=' && cmd[2] == '=')
-             printf("Current Mode : %d\r\n", DEBUG_GetPlayMode());
-    }      
-}
-
-void USART1_RX_MSG_Proc(void)
-{
-    uint32_t res_len = 0;
-    res_len = DMA_GetCurrDataCounter(DMA1_Channel5);
-    
-    
-    if(UART1_DMA_RCVBUFFER_SIZE - res_len){
-
-        if(DEBUG_GetPlayMode() & SYS_MODE_ECHO){
-            USART1_TX_DMA_Send(uart1_dma_receivebuffer, (size_t)(UART1_DMA_RCVBUFFER_SIZE - res_len));
-        }
-        if(DEBUG_GetPlayMode() & SYS_MODE_1TH4){
-            UART4_TX_DMA_Send(uart1_dma_receivebuffer, (size_t)(UART1_DMA_RCVBUFFER_SIZE - res_len));
-        }
-
-        //play mode control
-        Check_PlayMode_Cmd((char *)uart1_dma_receivebuffer);
-     
-        DMA_Cmd(DMA1_Channel5, DISABLE); 
-        DMA_SetCurrDataCounter(DMA1_Channel5, UART1_DMA_RCVBUFFER_SIZE);
-        DMA_Cmd(DMA1_Channel5, ENABLE);  
-    }
-}
-
-
-void UART4_RX_MSG_Proc(void){
-    uint16_t res_len = 0;
-    res_len = DMA_GetCurrDataCounter(DMA2_Channel3);
-
-    if(UART4_DMA_RCVBUFFER_SIZE - res_len) {
-        GSM_RetrieveData(uart4_dma_receivebuffer, (size_t)(UART4_DMA_RCVBUFFER_SIZE - res_len));
-        if(DEBUG_GetPlayMode() & SYS_MODE_1TH4){
-            USART1_TX_DMA_Send(uart4_dma_receivebuffer, (size_t)(UART4_DMA_RCVBUFFER_SIZE - res_len));
-        }    
-        DMA_Cmd(DMA2_Channel3, DISABLE); 
-        DMA_SetCurrDataCounter(DMA2_Channel3, UART4_DMA_RCVBUFFER_SIZE);
-        DMA_Cmd(DMA2_Channel3, ENABLE);       
-    }
-}
-
-
-void MSG_Polling(void)
-{
-    // TODO: 
-    //       1,Need a Message Pool or Message Queue or FIFO for  the efficiency and robust of sending and receiving buffers  
-    //       2,Error and warning Monitor for receiving a lot message overflow the receive buffer. (Using TC HT interrupt handler)   
-    //       3,message retreat middle layer  like "playmode controller".    
-    USART1_RX_MSG_Proc();
-    UART4_RX_MSG_Proc();
-}
+static void MSG_Polling(void);
 
 int main(void)
-{	
-	uint8_t err = 1;
+{
+    uint8_t err = 1;
+    uint32_t cnt = 0;
 
-	INIT_All();
+    INIT_All();
+    if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
+        err = GSM_PowerOn();
+        if(0 == err) {
+            INFO("\r\n GSM Power ON!");
+        }
+        else {
+            ERROR("\r\n GSM Power ON failed!");
+            return -1;
+        }
 
-        
-    err = GSM_PowerOn();
-    if(0 == err)
-        INFO("\r\n GSM Power ON!");
-    else
-        ERROR("\r\n GSM Power ON failed!");
-        
-   if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
         err = GSM_GPRSConnect();
-        if(0 == err)
+        if(0 == err) {
             INFO("\r\n GPRS connection OK!");
-        else
+        }
+        else {
             ERROR("\r\n GPRS connection failed!");
-        
-        GSM_Location();
-        GSM_GPRSSendData();
+            return -1;
+        }  
+
+        err = GSM_GPRSBuildTCPLink();
+        if(0 == err) {
+            INFO("\r\n TCP connection OK!");
+        }
+        else {
+            ERROR("\r\n TCP connection failed!");
+            return -1;
+        } 
+
     }
-	for(;;)
-	{   
-		/* LED twinkles */
-        #define TWINKLE_INTERVAL 2000
-		if(TIM2_Ms_Cycle(TWINKLE_INTERVAL)){
-			DBG_LED1_ON();
-   
-		}
+
+    for(;;)
+    {   
+    /* LED twinkles */
+#define TWINKLE_INTERVAL 2000
+        if(TIM2_Ms_Cycle(TWINKLE_INTERVAL)){
+            DBG_LED1_ON();
+            cnt++;
+            if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
+                CAN_CheckAllStatus();  
+                if(cnt >= 1) {
+                    cnt = 0;
+                    //GSM_Location();       
+                    err = GSM_MsgQuickCheck("CXALL");
+                    if(err == 0) {
+                        GSM_GPRSPushCarStatus();
+                    }
+
+                    err = GSM_MsgQuickCheck("\"REPLY\":\"OK\"");
+                    if(err == 0) {
+                        err = GSM_ConnectionHeartBeat();
+                        if(err > 0) {
+                            ERROR("\r\n HB failed !");
+                        }
+                    }
+                    
+                    err = GSM_MsgQuickCheck("\"RESESSION\":\"YES\"");
+                    if(err == 0) {
+                        GSM_ConnectionHeartBeat();
+                    } 
+
+                    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"CXBPS\"");
+                    if(err == 0) {
+                        //GSM_GPRSBeeperStatus();
+                        GSM_ConnectionHeartBeat();
+                    }                
+                            
+                    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPOPEN\"}");
+                    if(err == 0) {
+                        GSM_DataReset();
+                        BEEPER_ON();
+                        GSM_ConnectionHeartBeat();
+                        INFO("\r\n Beeper Open OK!");
+                    }        
+                    
+                    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPCLOSE\"}");
+                    if(err == 0) {
+                        GSM_DataReset();
+                        BEEPER_OFF();
+                        GSM_ConnectionHeartBeat();
+                        INFO("\r\n Beeper Close OK!");
+                    }         
+                    
+                }
+            }
+        }
         if(TIM2_Ms_Half(TWINKLE_INTERVAL)){
             DBG_LED1_OFF();
-			DEBUG_MonitorState();    
+            DEBUG_MonitorState();    
         }
         
-
         MSG_Polling();
-        
-	}
+    }
   
 }
 
@@ -164,13 +151,27 @@ static void INIT_All(void)
 
     DBG_LED1_OFF();
     DBG_LED2_OFF();
-        
     INFO("\r\n");
     INFO("***********************************************\r\n"); 
     INFO("*                                             *\r\n"); 
     INFO("*  HWYTREE - Innovation meets quality! Y^_^Y  *\r\n"); 
     INFO("*                                             *\r\n"); 
     INFO("***********************************************\r\n"); 
+
+    CAN_ProtocolScan();
+    I2C_LMP91000_Init();
+    BEEPER_GPIOConfiguration();
+
+}
+
+static void MSG_Polling(void)
+{
+    // TODO: 
+    //       1,Need a Message Pool or Message Queue or FIFO for  the efficiency and robust of sending and receiving buffers  
+    //       2,Error and warning Monitor for receiving a lot message overflow the receive buffer. (Using TC HT interrupt handler)   
+    //       3,message retreat middle layer  like "playmode controller".    
+    USART1_RX_MSG_Proc();
+    UART4_RX_MSG_Proc();
 }
 
 

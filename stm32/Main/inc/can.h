@@ -6,6 +6,7 @@
 
 typedef enum
 {
+CAN_PID = 0x00,
 CAN_RPM = 0x0C,     /* engine Revolutions Per Minute */
 CAN_VSS = 0x0D,     /* Vehicle Speed Sensor */
 CAN_ECT = 0x05,     /* Engine Coolant Temperature */
@@ -17,7 +18,12 @@ CAN_LOAD_PCT = 0x04 /* Load Percent */
 }E_CAN_CMD;
 
 void CAN_Config(void);
+uint8_t CAN_ProtocolScan(void);
+void CAN_CheckCarVIN(void);
+
 void CAN_CheckStatus(E_CAN_CMD Cmd);
+void* CAN_GetStatus(E_CAN_CMD Cmd);
+void CAN_CheckAllStatus(void);
 
 
 #endif
