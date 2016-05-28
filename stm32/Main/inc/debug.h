@@ -22,10 +22,10 @@
 #define DBG_LED2_ON()     GPIOA->BRR  = 0x00000008
 #define DBG_LED2_OFF()    GPIOA->BSRR = 0x00000008
 
-#define SYS_MODE_ECHO 			((uint32_t)0x00000001 << 0) 
-#define SYS_MODE_MON_PRT		((uint32_t)0x00000001 << 1) 
-#define SYS_MODE_1TH4  			((uint32_t)0x00000001 << 2) 
-#define SYS_MODE_MON4  			((uint32_t)0x00000001 << 3) 
+#define SYS_MODE_ECHO           ((uint32_t)0x00000001 << 0) 
+#define SYS_MODE_MON_PRT        ((uint32_t)0x00000001 << 1) 
+#define SYS_MODE_1TH4           ((uint32_t)0x00000001 << 2) 
+#define SYS_MODE_MON4           ((uint32_t)0x00000001 << 3) 
 #define SYS_MODE_AUTO_CONN      ((uint32_t)0x00000001 << 4)
 
 uint32_t DEBUG_GetUSART1IntCnt(void);
