@@ -12,7 +12,6 @@ uint8_t GSM_GPRSBuildTCPLink(void);
 
 uint8_t GSM_PowerOn(void);
 uint8_t GSM_GPRSConnect(void);
-uint8_t GSM_Location(void);
 uint8_t GSM_ConnectionHeartBeat(void);
 uint8_t GSM_GPRSPushCarStatus(void);
 uint8_t GSM_GPRSBeeperStatus(void);

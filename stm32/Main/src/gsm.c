@@ -46,8 +46,6 @@
 #define ROLLER_CTT_TYPE "Content-Type: application/json"
 #define ROLLER_CONNECTION "Connection: keep-alive"
 #define ROLLER_USER_AGENT2 "User-Agent: JackBian"
-#define ROLLER_SEND_CAR_STATUS_DATA "{\"DATA\":[{\"pn\":\"13912345678\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"80\", \"OBDCS\":\"60\", \"OBDSW\":\"20\", \"OBDKQLL\":\"30\", \"OBDQGJDYL\":\"20\", \"OBDJQMKD\":\"10\", \"OBDYNDCGQZ\":\"15\", \"OBDFHBFB\":\"30\", \"CNWD\":\"25\", \"CNYNN\":\"20\"},{\"bookdata\":\"0\"}]}\r\n" 
-#define ROLLER_SEND_BEEPER_DATA "{\"DATA\":[{\"pn\":\"13912345678\"},{\"BPS\":\"%s\"}]}\r\n"
 
 static uint16_t gsm_rcv_data_cnt = 0;
 static uint8_t gsm_rcv_datas[GSM_MAX_DATA_SIZE];
@@ -55,11 +53,8 @@ static uint8_t gsm_snd_datas[GSM_MAX_DATA_SIZE];
 static uint8_t gsm_json_datas[GSM_MAX_DATA_SIZE];
 
 static uint8_t cookie[500];
-static uint8_t longitude[16];
-static uint8_t latitude[16];
 static uint8_t ParserCSQ(void);
 static uint8_t ParserCookie(uint32_t timeout);
-static uint8_t ParserLocation(void);
 
 /* send AT command */
 void GSM_SendAT(uint8_t *data)
@@ -196,12 +191,20 @@ uint8_t GSM_PowerOn(void)
 uint8_t GSM_GPRSConnect(void)
 {
     uint8_t err = 0;
+    uint8_t csq_retry_cnt = 3;
+    uint8_t ciicr_retry_cnt = 3;
 
     /* No echo */
     GSM_SendAT("ATE0");
     err = GSM_WaitForMsg("OK",2);  
     if(err > 0)
         return err;
+
+/* If the GSM signal is not so good, we can't get signal strength at once.
+ * So I add retry here. retry count is adjustable.
+ */
+
+AT_CSQ_RETRY:
 
     /* Displays signal strength and channel bit error rate - +CSQ: 20,0*/
     GSM_SendAT("AT+CSQ"); 
@@ -240,11 +243,17 @@ uint8_t GSM_GPRSConnect(void)
         if(err>0)
             return err;
 
+/* If the GSM signal is not so good, we can't bring up a stable connection at once.
+ * So I add retry here. retry count is adjustable.
+ */
+AT_CIICR_RETRY:
         /* Bring Up Wireless Connection with GPRS or CSD */
         GSM_SendAT("AT+CIICR");
         err=GSM_WaitForMsg("OK", 30);
-        if(err>0)
-            return err;
+        if(err > 0) {
+            if(ciicr_retry_cnt--) goto AT_CIICR_RETRY;
+            else return err;
+        }
         SysTick_Delay_ms(500);
 
         /* Get Local IP Address - 10.222.243.153*/
@@ -254,54 +263,9 @@ uint8_t GSM_GPRSConnect(void)
             return err;
 
     }
+    else if(csq_retry_cnt--) goto AT_CSQ_RETRY;
 
     return err;    
-}
-
-
-uint8_t GSM_Location(void)
-{
-    uint8_t err = 0;
-
-    /* No echo */
-    GSM_SendAT("AT+SAPBR=3,1,\"Contype\",\"GPRS\"");
-    err = GSM_WaitForMsg("OK",2);  
-    if(err > 0)
-        return err;
-
-    GSM_SendAT("AT+SAPBR=3,1,\"APN\",\"CMNET\"");
-    err = GSM_WaitForMsg("OK",2);  
-    if(err > 0)
-        goto LOCATION_EXIT;
-
-    GSM_SendAT("AT+SAPBR=1,1");
-    err = GSM_WaitForMsg("OK",2);  
-    if(err > 0)
-        goto LOCATION_EXIT;
-
-    GSM_SendAT("AT+SAPBR=2,1");
-    err = GSM_WaitForMsg("OK",2);  
-    if(err > 0)
-        goto LOCATION_EXIT; 
-
-    GSM_SendAT("AT+CIPGSMLOC=1,1");
-    err = GSM_WaitForMsg("OK",20);  
-    if(err > 0)
-        goto LOCATION_EXIT; 
-
-    err = ParserLocation();
-    if(err > 0)
-    {
-    }
-
-LOCATION_EXIT:
-
-    GSM_SendAT("AT+SAPBR=0,1");
-    err = GSM_WaitForMsg("OK",2);  
-    if(err > 0)
-        return err; 
-
-    return err;
 }
 
 uint8_t GSM_GPRSBuildTCPLink(void)
@@ -449,8 +413,6 @@ uint8_t GSM_GPRSPushCarStatus(void)
     O2_persent = 0.16 - ((ADC_ConvertedValueLocal - 1.06) / (2.21-1.06)) * 0.16;
     //O2_persent = 0.16 - (ADC_ConvertedValueLocal - 1.16) * 0.15238;
   }
-
-
     
   sprintf((char*)gsm_json_datas,
     "{\"DATA\":[{\"pn\":\"13912345678\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"%d\", \"OBDCS\":\"%d\", \"OBDSW\":\"%d\", \"OBDKQLL\":\"%d\", \"OBDQGJDYL\":\"%d\", \"OBDJQMKD\":\"%d\", \"OBDYNDCGQZ\":\"%.3f\", \"OBDFHBFB\":\"%d\", \"CNWD\":\"%.1f\", \"CNYNN\":\"%.1f\"},{\"bookdata\":\"0\"}]}\r\n\0",
@@ -689,38 +651,6 @@ static uint8_t ParserCookie(uint32_t timeout)
 
 
   return err;
-}
-
-static uint8_t ParserLocation(void)
-{
-  char *p_find = NULL;
-  uint8_t err = 1;
-    int8_t i;
-
-  p_find = strchr((char *)gsm_rcv_datas, ',');
-  for(i = 0; i < 16; i++)
-  {
-    p_find++;
-    if(*p_find == ',')
-      break;
-    else
-      longitude[i] = *p_find;
-  }  
-
-  for(i = 0; i < 16; i++)
-  {
-    p_find++;
-    if(*p_find == ',')
-      break;
-    else
-      latitude[i] = *p_find;
-  } 
-
-  if(longitude[0] != 0 && latitude[0] != 0)
-    err = 0;
-  
-  return err;
-
 }
 
 

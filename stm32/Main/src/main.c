@@ -33,7 +33,8 @@
 #include "beeper.h"
 
 static void INIT_All(void);
-static void MSG_Polling(void);
+static void UART_MSG_Polling(void);
+static void GSM_MSG_Polling(void);
 
 int main(void)
 {
@@ -48,7 +49,7 @@ int main(void)
         }
         else {
             ERROR("\r\n GSM Power ON failed!");
-            return -1;
+            SYS_Reset();
         }
 
         err = GSM_GPRSConnect();
@@ -57,7 +58,7 @@ int main(void)
         }
         else {
             ERROR("\r\n GPRS connection failed!");
-            return -1;
+            SYS_Reset();
         }  
 
         err = GSM_GPRSBuildTCPLink();
@@ -66,7 +67,7 @@ int main(void)
         }
         else {
             ERROR("\r\n TCP connection failed!");
-            return -1;
+            SYS_Reset();
         } 
 
     }
@@ -80,49 +81,9 @@ int main(void)
             cnt++;
             if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
                 CAN_CheckAllStatus();  
-                if(cnt >= 1) {
+                if(cnt >= 5) {
                     cnt = 0;
-                    //GSM_Location();       
-                    err = GSM_MsgQuickCheck("CXALL");
-                    if(err == 0) {
-                        GSM_GPRSPushCarStatus();
-                    }
-
-                    err = GSM_MsgQuickCheck("\"REPLY\":\"OK\"");
-                    if(err == 0) {
-                        err = GSM_ConnectionHeartBeat();
-                        if(err > 0) {
-                            ERROR("\r\n HB failed !");
-                        }
-                    }
-                    
-                    err = GSM_MsgQuickCheck("\"RESESSION\":\"YES\"");
-                    if(err == 0) {
-                        GSM_ConnectionHeartBeat();
-                    } 
-
-                    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"CXBPS\"");
-                    if(err == 0) {
-                        //GSM_GPRSBeeperStatus();
-                        GSM_ConnectionHeartBeat();
-                    }                
-                            
-                    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPOPEN\"}");
-                    if(err == 0) {
-                        GSM_DataReset();
-                        BEEPER_ON();
-                        GSM_ConnectionHeartBeat();
-                        INFO("\r\n Beeper Open OK!");
-                    }        
-                    
-                    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPCLOSE\"}");
-                    if(err == 0) {
-                        GSM_DataReset();
-                        BEEPER_OFF();
-                        GSM_ConnectionHeartBeat();
-                        INFO("\r\n Beeper Close OK!");
-                    }         
-                    
+                    GSM_MSG_Polling();
                 }
             }
         }
@@ -131,7 +92,7 @@ int main(void)
             DEBUG_MonitorState();    
         }
         
-        MSG_Polling();
+        UART_MSG_Polling();
     }
   
 }
@@ -139,7 +100,6 @@ int main(void)
 static void INIT_All(void) 
 {
     RCC_Configuration();
-    NVIC_Configuration();
     GPIO_Configuration(); 
 
     USART1_Config();
@@ -148,6 +108,7 @@ static void INIT_All(void)
     UART4_DMA_Config(); 
 
     TIM2_Init();
+    BEEPER_GPIOConfiguration();
 
     DBG_LED1_OFF();
     DBG_LED2_OFF();
@@ -160,11 +121,56 @@ static void INIT_All(void)
 
     CAN_ProtocolScan();
     I2C_LMP91000_Init();
-    BEEPER_GPIOConfiguration();
 
 }
 
-static void MSG_Polling(void)
+static void GSM_MSG_Polling(void)
+{
+    uint8_t err = 1;
+
+    err = GSM_MsgQuickCheck("CXALL");
+    if(err == 0) {
+        GSM_GPRSPushCarStatus();
+    }
+    
+    err = GSM_MsgQuickCheck("\"REPLY\":\"OK\"");
+    if(err == 0) {
+        err = GSM_ConnectionHeartBeat();
+        if(err > 0) {
+            ERROR("\r\n HB failed !");
+        }
+    }
+    
+    err = GSM_MsgQuickCheck("\"RESESSION\":\"YES\"");
+    if(err == 0) {
+        GSM_ConnectionHeartBeat();
+    } 
+    
+    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"CXBPS\"");
+    if(err == 0) {
+        //GSM_GPRSBeeperStatus();
+        GSM_ConnectionHeartBeat();
+    }                
+            
+    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPOPEN\"}");
+    if(err == 0) {
+        GSM_DataReset();
+        BEEPER_ON();
+        GSM_ConnectionHeartBeat();
+        INFO("\r\n Beeper Open OK!");
+    }        
+    
+    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPCLOSE\"}");
+    if(err == 0) {
+        GSM_DataReset();
+        BEEPER_OFF();
+        GSM_ConnectionHeartBeat();
+        INFO("\r\n Beeper Close OK!");
+    }         
+
+}
+
+static void UART_MSG_Polling(void)
 {
     // TODO: 
     //       1,Need a Message Pool or Message Queue or FIFO for  the efficiency and robust of sending and receiving buffers  

@@ -123,7 +123,7 @@ void CAN_CheckCarVIN(void)
 * ISO15765-4 Extended 29bit 500K
 * ISO15765-4 Standard 11bit 250K
 * ISO15765-4 Extended 29bit 250K
-*/	
+*/
 uint8_t CAN_ProtocolScan(void)
 {
     uint8_t retry_cnt = 3;
@@ -135,9 +135,9 @@ INFO("\r\n CAN_BAUD_RATE_250KHz_STD");
     can_prescaler = 18;
     CAN_Config();
     CAN_CheckStatus(CAN_PID);
-    SysTick_Delay_ms(100);
+    SysTick_Delay_ms(2000);
     if(can_rx_msg.Data[1] == 'A') {
-        goto CAN_GET_CAR_VIN;	
+        goto CAN_GET_CAR_VIN;
     }
   
     if(retry_cnt--) goto CAN_BAUD_RATE_250KHz_STD;       
@@ -150,9 +150,9 @@ INFO("\r\n CAN_BAUD_RATE_250KHz_EXT");
         can_prescaler = 18;
         CAN_Config();
         CAN_CheckStatus(CAN_PID);
-        SysTick_Delay_ms(100); 
+        SysTick_Delay_ms(2000); 
         if(can_rx_msg.Data[1] == 'A') {
-            goto CAN_GET_CAR_VIN;	
+            goto CAN_GET_CAR_VIN;
         }
         
         if(retry_cnt--) goto CAN_BAUD_RATE_250KHz_EXT;
@@ -166,10 +166,10 @@ INFO("\r\n CAN_BAUD_RATE_500KHz_STD");
             can_prescaler = 9;
             CAN_Config();
             CAN_CheckStatus(CAN_PID);
-            SysTick_Delay_ms(100); 
+            SysTick_Delay_ms(2000); 
 
             if(can_rx_msg.Data[1] == 'A') {
-                goto CAN_GET_CAR_VIN;	
+                goto CAN_GET_CAR_VIN;
             }
           
             if(retry_cnt--) goto CAN_BAUD_RATE_500KHz_STD;          
@@ -182,23 +182,23 @@ INFO("\r\n CAN_BAUD_RATE_500KHz_EXT");
                 can_prescaler = 9;
                 CAN_Config();
                 CAN_CheckStatus(CAN_PID);
-                SysTick_Delay_ms(100); 
+                SysTick_Delay_ms(2000); 
 
                 if(can_rx_msg.Data[1] == 'A') {
-                    goto CAN_GET_CAR_VIN;		
+                    goto CAN_GET_CAR_VIN;
                 }
             
                 if(retry_cnt--) goto CAN_BAUD_RATE_500KHz_EXT; 
-        	    else {
-        		  goto CAN_OBFII_TEST_FAIL;
-        		} 
-	        }
-	    } 		
+                else {
+                    goto CAN_OBFII_TEST_FAIL;
+                } 
+            }
+        } 
     } 
       
 CAN_GET_CAR_VIN:
     CAN_CheckCarVIN();
-    SysTick_Delay_ms(10); 
+    SysTick_Delay_ms(2000); 
 
     INFO("\r\n CAN_GET_CAR_VIN");      
     return 0;
@@ -239,21 +239,21 @@ void* CAN_GetStatus(E_CAN_CMD Cmd)
 void CAN_CheckAllStatus(void)
 {
     CAN_CheckStatus(CAN_RPM);
-    SysTick_Delay_ms(1);
+    SysTick_Delay_ms(200);
     CAN_CheckStatus(CAN_VSS);
-    SysTick_Delay_ms(1);
+    SysTick_Delay_ms(200);
     CAN_CheckStatus(CAN_ECT);
-    SysTick_Delay_ms(1);
+    SysTick_Delay_ms(200);
     CAN_CheckStatus(CAN_MAF);
-    SysTick_Delay_ms(1);
+    SysTick_Delay_ms(200);
     CAN_CheckStatus(CAN_MAP);
-    SysTick_Delay_ms(1);
+    SysTick_Delay_ms(200);
     CAN_CheckStatus(CAN_TP);
-    SysTick_Delay_ms(1);
+    SysTick_Delay_ms(200);
     CAN_CheckStatus(CAN_O2B1S1);
-    SysTick_Delay_ms(1);
+    SysTick_Delay_ms(200);
     CAN_CheckStatus(CAN_LOAD_PCT);      
-    SysTick_Delay_ms(10);
+    SysTick_Delay_ms(200);
 
 }
 
@@ -326,7 +326,7 @@ void CAN2_RX0_IRQHandler(void)
         break; 
       default: 
         break;
-      }	    
+      }  
     }
 }
 
