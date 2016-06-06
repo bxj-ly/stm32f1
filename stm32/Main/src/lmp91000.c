@@ -106,7 +106,7 @@ static void ADC1_Mode_Config(void)
 	RCC_ADCCLKConfig(RCC_PCLK2_Div8); 
 	/*配置ADC1的通道11为55.	5个采样周期，序列为1 */ 
 	ADC_RegularChannelConfig(ADC1, ADC_Channel_9, 1, ADC_SampleTime_55Cycles5);
-    ADC_RegularChannelConfig(ADC1, ADC_Channel_16, 2, ADC_SampleTime_55Cycles5);
+    ADC_RegularChannelConfig(ADC1, ADC_Channel_8, 2, ADC_SampleTime_55Cycles5);
 	
 	/* Enable ADC1 DMA */
 	ADC_DMACmd(ADC1, ENABLE);

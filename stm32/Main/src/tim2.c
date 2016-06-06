@@ -44,8 +44,7 @@ void TIM2_clear_cnts(void){
     tim2_hs_chcnt = 0;
 }
 
-
-uint32_t TIM2_Ms_Cycle(uint32_t interval)
+uint8_t TIM2_Ms_Cycle(uint32_t interval)
 {
     tim2_1s_chcnt ++;
     if((tim2_ms_ticks % interval) == 0 && tim2_1s_chcnt == 1) {
@@ -53,7 +52,6 @@ uint32_t TIM2_Ms_Cycle(uint32_t interval)
     }
     return 0;
 }
-
 
 uint8_t TIM2_Ms_Half(uint32_t interval)
 {
@@ -64,11 +62,15 @@ uint8_t TIM2_Ms_Half(uint32_t interval)
     return 0;
 }
 
+uint32_t TIM2_GetTick(void)
+{
+    return tim2_ms_ticks;
+}
 
 void TIM2_IRQHandler(void)
 {
     if(TIM_GetITStatus(TIM2 , TIM_IT_Update) != RESET) 
-    {	
+    {
         TIM_ClearITPendingBit(TIM2 , TIM_FLAG_Update); 
         TIM2_clear_cnts();
         tim2_ms_ticks++;

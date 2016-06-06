@@ -31,68 +31,32 @@
 #include "gps.h"
 #include "lmp91000.h"
 #include "beeper.h"
+#include "spi.h"
 
 static void INIT_All(void);
+static void SIM800C_PowerOn(void);
 static void UART_MSG_Polling(void);
-static void GSM_MSG_Polling(void);
+static void Event_Polling(void);
 
 int main(void)
 {
-    uint8_t err = 1;
-    uint32_t cnt = 0;
-
     INIT_All();
-    if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
-        err = GSM_PowerOn();
-        if(0 == err) {
-            INFO("\r\n GSM Power ON!");
-        }
-        else {
-            ERROR("\r\n GSM Power ON failed!");
-            SYS_Reset();
-        }
-
-        err = GSM_GPRSConnect();
-        if(0 == err) {
-            INFO("\r\n GPRS connection OK!");
-        }
-        else {
-            ERROR("\r\n GPRS connection failed!");
-            SYS_Reset();
-        }  
-
-        err = GSM_GPRSBuildTCPLink();
-        if(0 == err) {
-            INFO("\r\n TCP connection OK!");
-        }
-        else {
-            ERROR("\r\n TCP connection failed!");
-            SYS_Reset();
-        } 
-
-    }
+    SIM800C_PowerOn();
 
     for(;;)
     {   
-    /* LED twinkles */
-#define TWINKLE_INTERVAL 2000
+        /* LED twinkles */
+        #define TWINKLE_INTERVAL 2000
         if(TIM2_Ms_Cycle(TWINKLE_INTERVAL)){
-            DBG_LED1_ON();
-            cnt++;
-            if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
-                CAN_CheckAllStatus();  
-                if(cnt >= 5) {
-                    cnt = 0;
-                    GSM_MSG_Polling();
-                }
-            }
+            //DBG_LED1_ON();
         }
         if(TIM2_Ms_Half(TWINKLE_INTERVAL)){
-            DBG_LED1_OFF();
-            DEBUG_MonitorState();    
+            //DBG_LED1_OFF();
+            //DEBUG_MonitorState();    
         }
         
         UART_MSG_Polling();
+        Event_Polling();
     }
   
 }
@@ -121,55 +85,31 @@ static void INIT_All(void)
 
     CAN_ProtocolScan();
     I2C_LMP91000_Init();
+    //SPIx_Init();
 
 }
 
-static void GSM_MSG_Polling(void)
+static void SIM800C_PowerOn(void)
 {
     uint8_t err = 1;
 
-    err = GSM_MsgQuickCheck("CXALL");
-    if(err == 0) {
-        GSM_GPRSPushCarStatus();
-    }
-    
-    err = GSM_MsgQuickCheck("\"REPLY\":\"OK\"");
-    if(err == 0) {
-        err = GSM_ConnectionHeartBeat();
-        if(err > 0) {
-            ERROR("\r\n HB failed !");
+    if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
+        err = GSM_PowerOn();
+        if(0 == err) {
+            INFO("\r\n GSM Power ON!");
         }
+        else {
+            ERROR("\r\n GSM Power ON failed!");
+            SYS_Reset();
+        }
+        /* No echo */
+        GSM_SendAT("ATE0");
+        err = GSM_WaitForMsg("OK",2);  
+        if(err > 0)
+            SYS_Reset();
     }
-    
-    err = GSM_MsgQuickCheck("\"RESESSION\":\"YES\"");
-    if(err == 0) {
-        GSM_ConnectionHeartBeat();
-    } 
-    
-    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"CXBPS\"");
-    if(err == 0) {
-        //GSM_GPRSBeeperStatus();
-        GSM_ConnectionHeartBeat();
-    }                
-            
-    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPOPEN\"}");
-    if(err == 0) {
-        GSM_DataReset();
-        BEEPER_ON();
-        GSM_ConnectionHeartBeat();
-        INFO("\r\n Beeper Open OK!");
-    }        
-    
-    err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPCLOSE\"}");
-    if(err == 0) {
-        GSM_DataReset();
-        BEEPER_OFF();
-        GSM_ConnectionHeartBeat();
-        INFO("\r\n Beeper Close OK!");
-    }         
 
 }
-
 static void UART_MSG_Polling(void)
 {
     // TODO: 
@@ -180,4 +120,36 @@ static void UART_MSG_Polling(void)
     UART4_RX_MSG_Proc();
 }
 
+
+static void Event_Polling(void)
+{
+    uint8_t err = 1;
+    uint32_t cnt = 0;
+
+    DBG_LED1_ON();
+
+    cnt = TIM2_GetTick();
+    if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
+         if(cnt % 1000 == 0) {
+            CAN_CheckAllStatus(); 
+            
+            err = GSM_CheckSignalStrength();
+            if(0 != err) {
+                ERROR("\r\n GSM Signal failed!");
+                SYS_Reset();
+            } 
+            err = GSM_GPRSSendData();
+            if(0 != err) {
+                /* Deactivate GPRS PDP Context - AT+CIPSHUT SHUT OK*/
+                GSM_SendAT("AT+CIPSHUT");    
+                err = GSM_WaitForMsg("SHUT OK", 15);
+                if(err > 0)
+                    SYS_Reset();
+            }
+        }
+    }
+    DBG_LED1_OFF();
+    //SysTick_Delay_ms(200);
+
+}
 

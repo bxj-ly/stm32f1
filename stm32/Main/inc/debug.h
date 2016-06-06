@@ -11,9 +11,10 @@
 #define ERROR(format,...) printf("%s#%s()#%u : " format,             \
             __FILE__, __FUNCTION__, __LINE__, ## __VA_ARGS__) 
 #else  
-#define DEBUG(format,...) 
+#define INFO(format,...) printf(format, ##__VA_ARGS__)
 #define DEBUG(format,...)
-#define ERROR(format,...)
+#define ERROR(format,...) printf("%s#%s()#%u : " format,             \
+            __FILE__, __FUNCTION__, __LINE__, ## __VA_ARGS__) 
 #endif 
 
 #define DBG_LED1_ON()     GPIOA->BRR  = 0x00000004

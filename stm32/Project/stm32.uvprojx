@@ -602,6 +602,21 @@
               <FileType>1</FileType>
               <FilePath>..\Main\src\debug.c</FilePath>
             </File>
+            <File>
+              <FileName>beeper.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Main\src\beeper.c</FilePath>
+            </File>
+            <File>
+              <FileName>lmp91000.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Main\src\lmp91000.c</FilePath>
+            </File>
+            <File>
+              <FileName>spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Main\src\spi.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -37,24 +37,24 @@
 #define ROLLER_HOST "www.hwytree.com"
 #define ROLLER_ADDR1 "http://www.hwytree.com/roller1.asp"
 #define ROLLER_ADDR2 "http://www.hwytree.com/roller2.asp"
-#define ROLLER_PHONE_NUM "13912345678"
+#define ROLLER_PHONE_NUM "13612345678"
 #define ROLLER_HTTP_PROTOCOL "HTTP/1.1"
-#define ROLLER_USER_AGENT "User-Agent: Fiddler"
+#define ROLLER_USER_AGENT "User-Agent: Roller"
 
 #define ROLLER_ACCEPT "Accept: text/html,application/json"
 #define ROLLER_ACCEPT_LA "Accept-Language: en-US"
 #define ROLLER_CTT_TYPE "Content-Type: application/json"
 #define ROLLER_CONNECTION "Connection: keep-alive"
-#define ROLLER_USER_AGENT2 "User-Agent: JackBian"
 
+uint16_t battery_voltage;
 static uint16_t gsm_rcv_data_cnt = 0;
 static uint8_t gsm_rcv_datas[GSM_MAX_DATA_SIZE];
 static uint8_t gsm_snd_datas[GSM_MAX_DATA_SIZE];
 static uint8_t gsm_json_datas[GSM_MAX_DATA_SIZE];
 
-static uint8_t cookie[500];
 static uint8_t ParserCSQ(void);
-static uint8_t ParserCookie(uint32_t timeout);
+static uint16_t ParserCADC(void);
+
 
 /* send AT command */
 void GSM_SendAT(uint8_t *data)
@@ -187,18 +187,10 @@ uint8_t GSM_PowerOn(void)
 
 }
 
-
-uint8_t GSM_GPRSConnect(void)
+uint8_t GSM_CheckSignalStrength(void)
 {
     uint8_t err = 0;
     uint8_t csq_retry_cnt = 3;
-    uint8_t ciicr_retry_cnt = 3;
-
-    /* No echo */
-    GSM_SendAT("ATE0");
-    err = GSM_WaitForMsg("OK",2);  
-    if(err > 0)
-        return err;
 
 /* If the GSM signal is not so good, we can't get signal strength at once.
  * So I add retry here. retry count is adjustable.
@@ -213,65 +205,52 @@ AT_CSQ_RETRY:
         return err; 
 
     err = ParserCSQ();
-    if(0 == err)
-    {
-        /* Network Registration Status  - CGREG: 0,3 OK*/
-        GSM_SendAT("AT+CGREG?");
-        err = GSM_WaitForMsg("+CGREG:", 2);
-        if(err > 0)
-            return err;
-
-        /* Check if the MS is connected to the GPRS network - +CGATT: 0 OK*/
-        GSM_SendAT("AT+CGATT?");
-        err = GSM_WaitForMsg("+CGATT:", 2);
-        if(err > 0)
-            return err;
-
-        SysTick_Delay_ms(100);
-
-        /* Deactivate GPRS PDP Context - AT+CIPSHUT SHUT OK*/
-        GSM_SendAT("AT+CIPSHUT");    
-        err = GSM_WaitForMsg("SHUT OK", 15);
-        if(err > 0)
-            return err;
-
-        SysTick_Delay_ms(100);
-
-        /* Start Task and Set APN, USER NAME, PASSWORD */
-        GSM_SendAT("AT+CSTT");    
-        err=GSM_WaitForMsg("OK", 5);
-        if(err>0)
-            return err;
-
-/* If the GSM signal is not so good, we can't bring up a stable connection at once.
- * So I add retry here. retry count is adjustable.
- */
-AT_CIICR_RETRY:
-        /* Bring Up Wireless Connection with GPRS or CSD */
-        GSM_SendAT("AT+CIICR");
-        err=GSM_WaitForMsg("OK", 30);
-        if(err > 0) {
-            if(ciicr_retry_cnt--) goto AT_CIICR_RETRY;
-            else return err;
-        }
-        SysTick_Delay_ms(500);
-
-        /* Get Local IP Address - 10.222.243.153*/
-        GSM_SendAT("AT+CIFSR");
-        err=GSM_WaitForMsg(".", 2);
-        if(err>0)
-            return err;
-
+    if(0 == err){
+        return 0;
     }
     else if(csq_retry_cnt--) goto AT_CSQ_RETRY;
 
     return err;    
+
 }
 
-uint8_t GSM_GPRSBuildTCPLink(void)
+
+uint8_t GSM_GPRSSendData(void)
 {
     uint8_t err = 0;
+    uint8_t i = 0;
     
+    /* Network Registration Status  - CGREG: 0,3 OK*/
+    GSM_SendAT("AT+CGREG?");
+    err = GSM_WaitForMsg("+CGREG:", 2);
+    if(err > 0)
+        return err;
+
+    /* Check if the MS is connected to the GPRS network - +CGATT: 0 OK*/
+    GSM_SendAT("AT+CGATT?");
+    err = GSM_WaitForMsg("+CGATT:", 2);
+    if(err > 0)
+        return err;
+
+    /* Start Task and Set APN, USER NAME, PASSWORD */
+    GSM_SendAT("AT+CSTT");    
+    err=GSM_WaitForMsg("OK", 5);
+    if(err>0)
+        return err;
+
+    /* Bring Up Wireless Connection with GPRS or CSD */
+    GSM_SendAT("AT+CIICR");
+    err=GSM_WaitForMsg("OK", 85);
+    if(err > 0) {
+        return err;
+    }
+
+    /* Get Local IP Address - 10.222.243.153*/
+    GSM_SendAT("AT+CIFSR");
+    err=GSM_WaitForMsg(".", 2);
+    if(err>0)
+        return err;
+        
     /* Start up TCP or UDP connection */
     GSM_SendAT("AT+CIPSTART=\"TCP\",\"www.hwytree.com\",80"); 
     err = GSM_WaitForMsg("CONNECT OK",20);
@@ -285,7 +264,7 @@ uint8_t GSM_GPRSBuildTCPLink(void)
       return err; 
 
     sprintf((char*)gsm_snd_datas, 
-      "GET %s?session=0&pn=%s %s\r\n%s\r\nHost: %s\r\n\r\n\0", 
+      "GET %s?session=1&pn=%s %s\r\n%s\r\nHost: %s\r\n\r\n\0", 
       ROLLER_ADDR1,
       ROLLER_PHONE_NUM,
       ROLLER_HTTP_PROTOCOL,
@@ -297,85 +276,48 @@ uint8_t GSM_GPRSBuildTCPLink(void)
     if(err > 0)
       return err;   
 
-    err = ParserCookie(10);
-    if(0 == err)
-    {
-      /* Send Data Through TCP or UDP Connection */
-      GSM_SendAT("AT+CIPSEND"); 
-      err = GSM_WaitForMsg(">",2);
-      if(err > 0)
-        return err;  
-      
-      sprintf((char*)gsm_snd_datas, 
-        "GET %s?session=1&pn=%s %s\r\n%s\r\nHost: %s\r\nCookie: %s\r\n\r\n\0", 
-        ROLLER_ADDR1,
-        ROLLER_PHONE_NUM,
-        ROLLER_HTTP_PROTOCOL,
-        ROLLER_USER_AGENT,
-        ROLLER_HOST,    
-        (char*)cookie
-        );
-      GSM_SendATData(gsm_snd_datas);    
-      err = GSM_WaitForMsg("SEND OK",2);
-      if(err > 0)
-        return err;   
+    SysTick_Delay_ms(100);
+    UART4_RX_MSG_Proc();
 
-    }
-    else
-    {
-      ERROR("No Cookie \r\n");
+    for(i = 0; i < 20; i++) {
+        err = GSM_MsgQuickCheck("CXALL");
+        if(err == 0) {
+            GSM_GPRSPushCarStatus();
+            break;
+        } 
+
+        err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPOPEN\"}");
+        if(err == 0) {
+            BEEPER_ON();
+            INFO("\r\n Beeper Open OK!");
+            break;
+        }     
+
+        err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPCLOSE\"}");
+        if(err == 0) {
+            BEEPER_OFF();
+            INFO("\r\n Beeper Open OK!");
+            break;
+        }
+        SysTick_Delay_ms(100);
+        UART4_RX_MSG_Proc();
     }
 
-    return err;
-
-}
-uint8_t GSM_ConnectionHeartBeat(void)
-{
-    uint8_t err = 0;
-
-    /* Send Data Through TCP or UDP Connection */
-    GSM_SendAT("AT+CIPSEND"); 
-    err = GSM_WaitForMsg(">",2);
+#if 0
+    GSM_SendAT("AT+CIPCLOSE");
+    err = GSM_WaitForMsg("CLOSE OK",10);
     if(err > 0)
-      return err;  
+      return err; 
+#endif
 
-    sprintf((char*)gsm_snd_datas, 
-      "GET %s?session=1&pn=%s %s\r\n%s\r\nHost: %s\r\nCookie: %s\r\n\r\n\0", 
-      ROLLER_ADDR1,
-      ROLLER_PHONE_NUM,
-      ROLLER_HTTP_PROTOCOL,
-      ROLLER_USER_AGENT,
-      ROLLER_HOST,    
-      (char*)cookie
-      );
-    GSM_SendATData(gsm_snd_datas);    
-    err = GSM_WaitForMsg("SEND OK",2);
+    /* Deactivate GPRS PDP Context - AT+CIPSHUT SHUT OK*/
+    GSM_SendAT("AT+CIPSHUT");    
+    err = GSM_WaitForMsg("SHUT OK", 15);
     if(err > 0)
-      return err;  
+        return err;
 
     return err;
-
 }
-static u16 GetTemp(u16 advalue)   
-{   
-    u32 Vtemp_sensor;   
-    s32 Current_Temp;   
-      
-//    ADC转换结束以后，读取ADC_DR寄存器中的结果，转换温度值计算公式如下：    
-//          V25 - VSENSE    
-//  T(℃) = ------------  + 25    
-//           Avg_Slope    
-//   V25：  温度传感器在25℃时 的输出电压，典型值1.43 V。    
-//  VSENSE：温度传感器的当前输出电压，与ADC_DR 寄存器中的结果ADC_ConvertedValue之间的转换关系为：    
-//            ADC_ConvertedValue * Vdd    
-//  VSENSE = --------------------------    
-//            Vdd_convert_value(0xFFF)    
-//  Avg_Slope：温度传感器输出电压和温度的关联参数，典型值4.3 mV/℃。    
-   
-    Vtemp_sensor = advalue * 330 / 4096;   
-    Current_Temp = (s32)(143 - Vtemp_sensor)*10000/43 + 2500;   
-    return (s16)Current_Temp;   
-}    
 
 extern uint32_t ADC_SAMPLE_AVE;
 extern uint32_t STM32_TEMP_AVE;
@@ -392,30 +334,38 @@ uint8_t GSM_GPRSPushCarStatus(void)
   uint16_t can_car_TP = *((uint16_t*)CAN_GetStatus(CAN_TP));
   float can_car_O2B1S1 = *((float*)CAN_GetStatus(CAN_O2B1S1));  
   uint16_t can_car_load_PCT = *((uint16_t*)CAN_GetStatus(CAN_LOAD_PCT));
-  float ADC_ConvertedValueLocal;
-  float O2_persent;
+  float acd_converted_o2_voltage;
+  float adc_converted_temp_voltage;
+ // float O2_persent;
+  float car_battery_voltage = 0;
+
+
+  GSM_CheckCarBatteryVoltage();
 
   /* Send Data Through TCP or UDP Connection */
   GSM_SendAT("AT+CIPSEND"); 
   err = GSM_WaitForMsg(">",2);
   if(err > 0)
     return err; 
-  
-  ADC_ConvertedValueLocal =(float) ADC_SAMPLE_AVE/4096*3.3; 
-  if(ADC_ConvertedValueLocal <= 0.71) {
+  adc_converted_temp_voltage  =(float) STM32_TEMP_AVE/4096*3.3; 
+  acd_converted_o2_voltage =(float) ADC_SAMPLE_AVE/4096*3.3; 
+#if 0  
+  if(acd_converted_o2_voltage <= 0.71) {
     O2_persent = 0.209;
   }
-  else if(ADC_ConvertedValueLocal < 1.06) {
-    O2_persent = 0.209 - ((ADC_ConvertedValueLocal - 0.71) / (1.06-0.71))*(0.209 - 0.16);
-    //O2_persent = 0.209 - (ADC_ConvertedValueLocal - 0.81) * 0.14;
+  else if(acd_converted_o2_voltage < 1.06) {
+    O2_persent = 0.209 - ((acd_converted_o2_voltage - 0.71) / (1.06-0.71))*(0.209 - 0.16);
+    //O2_persent = 0.209 - (acd_converted_o2_voltage - 0.81) * 0.14;
   }
   else {
-    O2_persent = 0.16 - ((ADC_ConvertedValueLocal - 1.06) / (2.21-1.06)) * 0.16;
-    //O2_persent = 0.16 - (ADC_ConvertedValueLocal - 1.16) * 0.15238;
+    O2_persent = 0.16 - ((acd_converted_o2_voltage - 1.06) / (2.21-1.06)) * 0.16;
+    //O2_persent = 0.16 - (acd_converted_o2_voltage - 1.16) * 0.15238;
   }
+#endif
+  car_battery_voltage = (float) battery_voltage / 1000 * 6;
     
   sprintf((char*)gsm_json_datas,
-    "{\"DATA\":[{\"pn\":\"13912345678\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"%d\", \"OBDCS\":\"%d\", \"OBDSW\":\"%d\", \"OBDKQLL\":\"%d\", \"OBDQGJDYL\":\"%d\", \"OBDJQMKD\":\"%d\", \"OBDYNDCGQZ\":\"%.3f\", \"OBDFHBFB\":\"%d\", \"CNWD\":\"%.1f\", \"CNYNN\":\"%.1f\"},{\"bookdata\":\"0\"}]}\r\n\0",
+    "{\"DATA\":[{\"pn\":\"13612345678\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"%d\", \"OBDCS\":\"%d\", \"OBDSW\":\"%d\", \"OBDKQLL\":\"%d\", \"OBDQGJDYL\":\"%d\", \"OBDJQMKD\":\"%d\", \"OBDYNDCGQZ\":\"%.3f\", \"OBDFHBFB\":\"%d\", \"CNWD\":\"%.2f\", \"CNYNN\":\"%.2f\", \"BATV\":\"%.2f\"},{\"bookdata\":\"0\"}]}\r\n\0",
     can_car_RPM,
     can_car_VSS,
     can_car_ECT,
@@ -424,8 +374,9 @@ uint8_t GSM_GPRSPushCarStatus(void)
     can_car_TP,
     can_car_O2B1S1,
     can_car_load_PCT,
-    (float)GetTemp(STM32_TEMP_AVE) / 1000,
-    O2_persent * 100);
+    adc_converted_temp_voltage,
+    acd_converted_o2_voltage,
+    car_battery_voltage);
   sprintf((char*)gsm_snd_datas, 
     "POST %s %s\r\n%s\r\n%s\r\nContent-Length: %d\r\n%s\r\n%s\r\nHost: %s:80\r\n%s\r\n\r\n%s",
     ROLLER_ADDR2,
@@ -436,7 +387,7 @@ uint8_t GSM_GPRSPushCarStatus(void)
     ROLLER_CTT_TYPE,
     ROLLER_CONNECTION,
     ROLLER_HOST,  
-    ROLLER_USER_AGENT2,
+    ROLLER_USER_AGENT,
     gsm_json_datas
     );
 
@@ -456,50 +407,6 @@ uint8_t GSM_GPRSPushCarStatus(void)
 
 }
 
-
-uint8_t GSM_GPRSBeeperStatus(void)
-{
-  uint8_t err = 0;
-  uint8_t beeper_status = BEEPER_GetStatus();
-
-  /* Send Data Through TCP or UDP Connection */
-  GSM_SendAT("AT+CIPSEND"); 
-  err = GSM_WaitForMsg(">",2);
-  if(err > 0)
-    return err; 
-
-  if(0 == beeper_status) {
-      strcpy((char*)gsm_json_datas,
-        "{\"DATA\":[{\"pn\":\"13912345678\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"1\",\"BPS\":\"Close\"},{\"bookdata\":\"0\"}]}\r\n");
-  }
-  else {
-      strcpy((char*)gsm_json_datas,
-        "{\"DATA\":[{\"pn\":\"13912345678\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"1\",\"BPS\":\"Open\"},{\"bookdata\":\"0\"}]}\r\n");
-  }
-  sprintf((char*)gsm_snd_datas, 
-    "POST %s %s\r\n%s\r\n%s\r\nContent-Length: %d\r\n%s\r\n%s\r\nHost: %s:80\r\n%s\r\n\r\n%s",
-    ROLLER_ADDR2,
-    ROLLER_HTTP_PROTOCOL,
-    ROLLER_ACCEPT,
-    ROLLER_ACCEPT_LA,
-    strlen((char*)gsm_json_datas),
-    ROLLER_CTT_TYPE,
-    ROLLER_CONNECTION,
-    ROLLER_HOST,  
-    ROLLER_USER_AGENT2,
-    gsm_json_datas
-    );
-
-  GSM_SendATData(gsm_snd_datas);
-  err = GSM_WaitForMsg("SEND OK",2);
-  if(err > 0)
-    return err; 
-
-  return err;
-
-}
-
-
 /* timeout seconds */
 uint8_t GSM_WaitForMsg(uint8_t *p, uint32_t timeout)
 {
@@ -515,6 +422,12 @@ uint8_t GSM_WaitForMsg(uint8_t *p, uint32_t timeout)
             p_find = strstr((char*)gsm_rcv_datas, (char*)p);
             if(NULL != p_find) {
                 err = 0;
+                break;
+            }
+
+            p_find = strstr((char*)gsm_rcv_datas, "ERROR");
+            if(NULL != p_find) {
+                err = 2;
                 break;
             }
         }
@@ -540,6 +453,19 @@ uint8_t GSM_MsgQuickCheck(uint8_t *p)
 
     return err;
 } 
+
+uint8_t GSM_CheckCarBatteryVoltage(void)
+{
+    uint8_t err = 0;
+    GSM_SendAT("AT+CADC?");
+    err = GSM_WaitForMsg("+CADC:", 2);
+    if(err != 0) {
+        return err;
+    }
+
+    battery_voltage = ParserCADC();
+    return err;
+}
 
 
 void GSM_DataReset(void)
@@ -600,7 +526,7 @@ static uint8_t ParserCSQ(void)
         else if(*p == 0x0D || *p == 0x0A)
             break; 
     }
-    INFO("\r\n rssi=%d ber=%d\r\n ", rssi, ber);
+ //   INFO("\r\n rssi=%d ber=%d\r\n ", rssi, ber);
 
     if(rssi > 1 && rssi < 32) {
         if(ber > 7) {
@@ -614,43 +540,46 @@ static uint8_t ParserCSQ(void)
     return err;
 }
 
-static uint8_t ParserCookie(uint32_t timeout)
+/* 
+AT+CADC?
++CADC: 1,2034
+
+*/
+static uint16_t ParserCADC(void)
 {
-    char *p_find = NULL;
-    uint32_t cnt = 0;
-    uint8_t err = 1;
-    int8_t i = 0;
+    uint8_t i = 0;
+    uint16_t flag = 0;
+    uint16_t voltage = 0;
+    char *p = NULL;  
 
-    UART4_RX_MSG_Proc();
-    SysTick_Delay_ms(100);
-    timeout *= 10;
-    while(cnt < timeout) {
-        //DEBUG("gsm_rcv_datas=%s\r\n", gsm_rcv_datas);
-        if(gsm_rcv_data_cnt > 0) {
-            p_find = strstr((char *)gsm_rcv_datas, "Set-Cookie:"); 
-            if(NULL != p_find) {
-                err = 0;
-                while(*p_find != ':') p_find++;
-                p_find++;
-                for(i = 0; i < 50; i++) {
-                    if(*p_find == ';')
-                        break;
-                    else
-                        cookie[i] = *p_find;
-
-                    p_find++;
-                }  
-                //DEBUG("cookie=%s\r\n", cookie);
-                break;
-            }
+    p = strchr((char *)gsm_rcv_datas, ':'); 
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p > 0x2F && *p < 0x3A) {
+            flag *= 10;
+            flag += *p - 0x30;
         }
-        UART4_RX_MSG_Proc();
-        SysTick_Delay_ms(100);
-        cnt++;
+        else if(*p == ',')
+            break;
     }
 
+    p = strchr((char *)gsm_rcv_datas, ','); 
+    for(i = 0; i < 10; i++) {
+        p++;
+        if(*p > 0x2F && *p < 0x3A) {
+            voltage *= 10;
+            voltage += *p - 0x30;
+        }
+        else if(*p == 0x0D || *p == 0x0A)
+            break; 
+    }
+//    INFO("\r\n flag=%d battery_voltage=%d\r\n ", flag, voltage);
 
-  return err;
+    if(flag == 0) {
+        voltage = 0;
+    }
+
+    return voltage;
 }
 
 
