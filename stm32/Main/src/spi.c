@@ -21,11 +21,23 @@
 #include "spi.h"
 #include "debug.h"
 
-void SPIx_Init(void)
+void SPI_NVIC_Init(void){
+    NVIC_InitTypeDef NVIC_InitStructure;
+    
+    NVIC_InitStructure.NVIC_IRQChannel = SPI1_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure);
+
+    SPI_I2S_ITConfig(SPI1,SPI_I2S_IT_RXNE,ENABLE);
+}
+
+void SPI1_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
     SPI_InitTypeDef  SPI_InitStructure;
-    NVIC_InitTypeDef NVIC_InitStructure;
+
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA|RCC_APB2Periph_SPI1, ENABLE );        
 
@@ -55,100 +67,34 @@ void SPIx_Init(void)
     SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
     SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
     SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-    SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+    SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_32;
     SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
     SPI_InitStructure.SPI_CRCPolynomial = 7;
     SPI_Init(SPI1, &SPI_InitStructure);
     
-    NVIC_InitStructure.NVIC_IRQChannel = SPI1_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-
-    SPI_I2S_ITConfig(SPI1,SPI_I2S_IT_RXNE,ENABLE);
+//    SPI_NVIC_Init();
 
     /* Enable SPI1  */
     SPI_Cmd(SPI1, ENABLE);
-
-    SPIx_ReadWriteByte(0xff);//启动传输                 
+            
 }   
-//SPI 速度设置函数
-//SpeedSet:
-//SPI_BaudRatePrescaler_2   2分频   (SPI 36M@sys 72M)
-//SPI_BaudRatePrescaler_8   8分频   (SPI 9M@sys 72M)
-//SPI_BaudRatePrescaler_16  16分频  (SPI 4.5M@sys 72M)
-//SPI_BaudRatePrescaler_256 256分频 (SPI 281.25K@sys 72M)
-  
-
-
-//SPIx 读写一个字节
-//TxData:要写入的字节
-//返回值:读取到的字节
-uint8_t SPIx_ReadWriteByte(uint8_t TxData)
-{               
-        uint8_t retry=0;                                         
-        while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) //检查指定的SPI标志位设置与否:发送缓存空标志位
-                {
-                retry++;
-                if(retry>200)return 0;
-                }                          
-        SPI_I2S_SendData(SPI1, TxData); //通过外设SPIx发送一个数据
-        retry=0;
-
-        while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET); //检查指定的SPI标志位设置与否:接受缓存非空标志位
-                {
-                retry++;
-                if(retry>200)return 0;
-                }                                                              
-        return SPI_I2S_ReceiveData(SPI1); //返回通过SPIx最近接收的数据                                            
-}
-
-
-
-
-uint8_t SPI1_ReadByte(uint8_t TxData)         //读取数据
-{        
-        uint8_t retry=0;
-        Write_data(0XFF);
-        while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET); //检查指定的SPI标志位设置与否:接受缓存非空标志位
-                {
-                retry++;
-                if(retry>200)return 0;
-                }
-                                                                              
-        return SPI_I2S_ReceiveData(SPI1); //返回通过SPIx最近接收的数据                    
-}
-
-
-
-void Write_data(uint8_t RxData)                 //发送数据
-{
-        uint8_t retry=0;                                         
-        while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) //检查指定的SPI标志位设置与否:发送缓存空标志位
-                {
-                retry++;
-                if(retry>200) return;
-                }                          
-        SPI_I2S_SendData(SPI1, RxData); //通过外设SPIx发送一个数据
-}
 
 
 /*******************************************************************************
-* Function Name  : SPI_SendByte
+* Function Name  : SPI1_GetByte
 * Description    : Sends a byte through the SPI interface and return the byte
 *                  received from the SPI bus.
-* Input          : byte : byte to send.
+* Input          : cmd : cmd to send.
 * Output         : None
 * Return         : The value of the received byte.
 *******************************************************************************/
-uint8_t SPI_SendByte(uint8_t byte)
+uint8_t SPI1_GetByte(uint8_t cmd)
 {
   /* Loop while DR register in not emplty */
   while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
 
   /* Send byte through the SPI1 peripheral */
-  SPI_I2S_SendData(SPI1, byte);
+  SPI_I2S_SendData(SPI1, cmd);
 
   /* Wait to receive a byte */
   while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET);
@@ -162,7 +108,7 @@ void SPI1_IRQHandler(void)
     uint8_t c;
     if(SPI_I2S_GetFlagStatus(SPI1,SPI_I2S_FLAG_RXNE)==SET){
         c = SPI_I2S_ReceiveData(SPI1);
-        INFO("%c",c);
+ //       INFO("%c",c);
     }
         
 }
