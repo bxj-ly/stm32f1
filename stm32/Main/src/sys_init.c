@@ -126,19 +126,36 @@ void GPIO_Configuration(void)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOC, &GPIO_InitStructure);
 
+#if defined(USART1_AS_DEBUG_COM)
     /* USART1 GPIO config */
     /* Configure USART1 Tx as alternate function push-pull */
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
 
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);    
+    GPIO_Init(GPIOB, &GPIO_InitStructure);   
+
     /* Configure USART1 Rx as input floating */
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    //GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_OD;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOB, &GPIO_InitStructure);
+
+#else
+    /* USART1 GPIO config */
+    /* Configure USART1 Tx as alternate function push-pull */
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);   
+    GPIO_SetBits(GPIOB, GPIO_Pin_6) ;
+    /* Configure USART1 Rx as input floating */
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+    GPIO_SetBits(GPIOB, GPIO_Pin_7) ;
+#endif
 
     /* USART4 GPIO config */
     /* Configure UART4 Tx as alternate function push-pull */

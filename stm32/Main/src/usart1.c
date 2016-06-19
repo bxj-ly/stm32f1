@@ -129,6 +129,7 @@ void USART1_RX_MSG_Proc(void)
     }
 }
 
+#if defined(USART1_AS_DEBUG_COM)
 int fputc(int ch, FILE *f)
 {
     while (!(USART1->SR & USART_FLAG_TXE));
@@ -136,6 +137,8 @@ int fputc(int ch, FILE *f)
     while (!(USART1->SR & USART_FLAG_TXE)); 
     return (ch);
 }
+
+#endif
 
 /******************************************************************************/
 /*                 STM32F10x Peripherals Interrupt Handlers                   */

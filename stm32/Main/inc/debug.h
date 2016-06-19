@@ -4,6 +4,8 @@
 #include <stdio.h>
 
 #define __DEBUG__ 
+//#define USART1_AS_DEBUG_COM
+#define VIRTUALCOM_AS_DEBUG_COM
   
 #ifdef __DEBUG__  
 #define INFO(format,...) printf(format, ##__VA_ARGS__)  

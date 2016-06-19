@@ -132,7 +132,7 @@ uint8_t CAN_ProtocolScan(void)
 CAN_BAUD_RATE_250KHz_STD:
 INFO("\r\n CAN_BAUD_RATE_250KHz_STD");
     can_id_type = CAN_ID_STD;
-    can_prescaler = 18;
+    can_prescaler = 8;
     CAN_Config();
     CAN_CheckStatus(CAN_PID);
     SysTick_Delay_ms(2000);
@@ -147,7 +147,7 @@ CAN_BAUD_RATE_250KHz_EXT:
 INFO("\r\n CAN_BAUD_RATE_250KHz_EXT");
 
         can_id_type = CAN_ID_EXT;
-        can_prescaler = 18;
+        can_prescaler = 8;
         CAN_Config();
         CAN_CheckStatus(CAN_PID);
         SysTick_Delay_ms(2000); 
@@ -163,7 +163,7 @@ CAN_BAUD_RATE_500KHz_STD:
 INFO("\r\n CAN_BAUD_RATE_500KHz_STD");    
 
             can_id_type = CAN_ID_STD;
-            can_prescaler = 9;
+            can_prescaler = 4;
             CAN_Config();
             CAN_CheckStatus(CAN_PID);
             SysTick_Delay_ms(2000); 
@@ -179,7 +179,7 @@ CAN_BAUD_RATE_500KHz_EXT:
 INFO("\r\n CAN_BAUD_RATE_500KHz_EXT");    
 
                 can_id_type = CAN_ID_EXT;
-                can_prescaler = 9;
+                can_prescaler = 4;
                 CAN_Config();
                 CAN_CheckStatus(CAN_PID);
                 SysTick_Delay_ms(2000); 
@@ -364,6 +364,7 @@ static void CAN_NVIC_Config(void)
   NVIC_Init(&NVIC_InitStructure);
 }
 
+/* CAN Baud Rate = PCLK1 / ((CAN_SJW + CAN_BS1 + CAN_BS2) * CAN_Prescaler) */
 static void CAN_Mode_Config(void)
 {
   CAN_InitTypeDef        CAN_InitStructure;
@@ -380,8 +381,8 @@ static void CAN_Mode_Config(void)
   CAN_InitStructure.CAN_TXFP=ENABLE;
   CAN_InitStructure.CAN_Mode = CAN_Mode_Normal;
   CAN_InitStructure.CAN_SJW=CAN_SJW_1tq;
-  CAN_InitStructure.CAN_BS1=CAN_BS1_4tq;
-  CAN_InitStructure.CAN_BS2=CAN_BS2_3tq;
+  CAN_InitStructure.CAN_BS1=CAN_BS1_11tq;
+  CAN_InitStructure.CAN_BS2=CAN_BS2_6tq;
   CAN_InitStructure.CAN_Prescaler = can_prescaler;
   CAN_Init(CAN2, &CAN_InitStructure);
 }

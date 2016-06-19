@@ -365,7 +365,8 @@ uint8_t GSM_GPRSPushCarStatus(void)
   car_battery_voltage = (float) battery_voltage / 1000 * 6;
     
   sprintf((char*)gsm_json_datas,
-    "{\"DATA\":[{\"pn\":\"13612345678\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"%d\", \"OBDCS\":\"%d\", \"OBDSW\":\"%d\", \"OBDKQLL\":\"%d\", \"OBDQGJDYL\":\"%d\", \"OBDJQMKD\":\"%d\", \"OBDYNDCGQZ\":\"%.3f\", \"OBDFHBFB\":\"%d\", \"CNWD\":\"%.2f\", \"CNYNN\":\"%.2f\", \"BATV\":\"%.2f\"},{\"bookdata\":\"0\"}]}\r\n\0",
+    "{\"DATA\":[{\"pn\":\"%s\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"%d\", \"OBDCS\":\"%d\", \"OBDSW\":\"%d\", \"OBDKQLL\":\"%d\", \"OBDQGJDYL\":\"%d\", \"OBDJQMKD\":\"%d\", \"OBDYNDCGQZ\":\"%.3f\", \"OBDFHBFB\":\"%d\", \"CNWD\":\"%.2f\", \"CNYNN\":\"%.2f\", \"BATV\":\"%.2f\"},{\"bookdata\":\"0\"}]}\r\n\0",
+    ROLLER_PHONE_NUM,
     can_car_RPM,
     can_car_VSS,
     can_car_ECT,

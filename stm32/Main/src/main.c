@@ -32,6 +32,7 @@
 #include "lmp91000.h"
 #include "beeper.h"
 #include "spi.h"
+#include "vcom.h"
 
 static void INIT_All(void);
 static void SIM800C_PowerOn(void);
@@ -66,13 +67,20 @@ static void INIT_All(void)
     RCC_Configuration();
     GPIO_Configuration(); 
 
+#if defined(USART1_AS_DEBUG_COM)
     USART1_Config();
     USART1_DMA_Config();
+#endif
+
+
     UART4_Config();
     UART4_DMA_Config(); 
 
     TIM2_Init();
-    BEEPER_GPIOConfiguration();
+ #if defined(VIRTUALCOM_AS_DEBUG_COM)
+    VCOM_Config();
+#endif   
+    //BEEPER_GPIOConfiguration();
 
     DBG_LED1_OFF();
     DBG_LED2_OFF();
@@ -85,7 +93,7 @@ static void INIT_All(void)
 
     CAN_ProtocolScan();
     I2C_LMP91000_Init();
-    //SPIx_Init();
+    SPI1_Init();
 
 }
 
