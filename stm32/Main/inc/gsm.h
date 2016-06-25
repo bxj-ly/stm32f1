@@ -18,5 +18,7 @@ uint8_t GSM_WaitForMsg(uint8_t *p,uint32_t timeout);
 uint8_t GSM_MsgQuickCheck(uint8_t *p);
 
 uint8_t GSM_CheckCarBatteryVoltage(void);
+uint8_t GSM_CheckBTSPosition(void);
+
 
 #endif  /*__GSM_H*/

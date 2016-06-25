@@ -398,8 +398,8 @@ uint8_t GSM_GPRSPushCarStatus(void)
     position_type,
     mcc,
     mnc,
-    cellid,
     lac,
+    cellid,
     longitude,
     latitude);
   sprintf((char*)gsm_snd_datas, 
@@ -771,9 +771,51 @@ void ParserCENG(void)
 
     for(i = 0; i < 5; i++) {
         p++;
-        if(*p > 0x2F && *p < 0x3A) {
-            lac *= 10;
-            lac += *p - 0x30;
+        if((*p > 0x2F && *p < 0x3A) || (*p >= 'a' && *p <= 'f') || (*p >= 'A' && *p <= 'F')) {
+            switch(*p)
+            {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                tmp = *p - 0x30;
+                break;
+            case 'a':
+            case 'A':
+                tmp = 10;
+                break;
+            case 'b':
+            case 'B':
+                tmp = 11;
+                break;
+            case 'c':
+            case 'C':
+                tmp = 12;
+                break;
+            case 'd':
+            case 'D':
+                tmp = 13;
+                break;
+            case 'e':
+            case 'E':
+                tmp = 14;
+                break;
+            case 'f':
+            case 'F':
+                tmp = 15;
+                break;
+            default:
+                tmp = 0;
+                break;
+            }
+            lac *= 16;
+            lac += tmp;        
         }
         else if(*p == ',')
             break; 
