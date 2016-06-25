@@ -33,6 +33,7 @@
 #include "beeper.h"
 #include "spi.h"
 #include "vcom.h"
+#include "nmealib.h"
 
 static void INIT_All(void);
 static void SIM800C_PowerOn(void);
@@ -128,7 +129,6 @@ static void UART_MSG_Polling(void)
     UART4_RX_MSG_Proc();
 }
 
-
 static void Event_Polling(void)
 {
     uint8_t err = 1;
@@ -140,6 +140,7 @@ static void Event_Polling(void)
     if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
          if(cnt % 1000 == 0) {
             CAN_CheckAllStatus(); 
+            GPS_Position();
             
             err = GSM_CheckSignalStrength();
             if(0 != err) {

@@ -25,6 +25,7 @@
 #include "uart4.h"
 #include "can.h"
 #include "beeper.h"
+#include "gps.h"
 
 /* PB5 -> GSM_PWRKEY */
 #define SIM800C_PWRKEY_ON()    GPIOB->BRR  = 0x00000020
@@ -37,7 +38,7 @@
 #define ROLLER_HOST "www.hwytree.com"
 #define ROLLER_ADDR1 "http://www.hwytree.com/roller1.asp"
 #define ROLLER_ADDR2 "http://www.hwytree.com/roller2.asp"
-#define ROLLER_PHONE_NUM "13612345678"
+#define ROLLER_PHONE_NUM "13312345678"
 #define ROLLER_HTTP_PROTOCOL "HTTP/1.1"
 #define ROLLER_USER_AGENT "User-Agent: Roller"
 
@@ -47,6 +48,11 @@
 #define ROLLER_CONNECTION "Connection: keep-alive"
 
 uint16_t battery_voltage;
+uint16_t mcc = 0;
+uint16_t mnc = 0;
+uint16_t cellid = 0;
+uint16_t lac = 0;
+
 static uint16_t gsm_rcv_data_cnt = 0;
 static uint8_t gsm_rcv_datas[GSM_MAX_DATA_SIZE];
 static uint8_t gsm_snd_datas[GSM_MAX_DATA_SIZE];
@@ -54,7 +60,7 @@ static uint8_t gsm_json_datas[GSM_MAX_DATA_SIZE];
 
 static uint8_t ParserCSQ(void);
 static uint16_t ParserCADC(void);
-
+static void ParserCENG(void);
 
 /* send AT command */
 void GSM_SendAT(uint8_t *data)
@@ -338,9 +344,13 @@ uint8_t GSM_GPRSPushCarStatus(void)
   float adc_converted_temp_voltage;
  // float O2_persent;
   float car_battery_voltage = 0;
+  uint8_t position_type = 0;
 
+  double longitude;
+  double latitude;
 
   GSM_CheckCarBatteryVoltage();
+  GSM_CheckBTSPosition();
 
   /* Send Data Through TCP or UDP Connection */
   GSM_SendAT("AT+CIPSEND"); 
@@ -363,9 +373,16 @@ uint8_t GSM_GPRSPushCarStatus(void)
   }
 #endif
   car_battery_voltage = (float) battery_voltage / 1000 * 6;
+
+  if(GPS_data.lon.deg != 0)
+  {
+    position_type = 1;
+    longitude = (double)GPS_data.lon.deg + ((double)GPS_data.lon.min + (double)GPS_data.lon.minp1 / 100 + (double)GPS_data.lon.minp2 / 10000) / 60;
+    latitude = (double)GPS_data.lat.deg + ((double)GPS_data.lat.min + (double)GPS_data.lat.minp1 / 100 + (double)GPS_data.lat.minp2 / 10000) / 60;     
+  }
     
   sprintf((char*)gsm_json_datas,
-    "{\"DATA\":[{\"pn\":\"%s\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"%d\", \"OBDCS\":\"%d\", \"OBDSW\":\"%d\", \"OBDKQLL\":\"%d\", \"OBDQGJDYL\":\"%d\", \"OBDJQMKD\":\"%d\", \"OBDYNDCGQZ\":\"%.3f\", \"OBDFHBFB\":\"%d\", \"CNWD\":\"%.2f\", \"CNYNN\":\"%.2f\", \"BATV\":\"%.2f\"},{\"bookdata\":\"0\"}]}\r\n\0",
+    "{\"DATA\":[{\"pn\":\"%s\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"%d\", \"OBDCS\":\"%d\", \"OBDSW\":\"%d\", \"OBDKQLL\":\"%d\", \"OBDQGJDYL\":\"%d\", \"OBDJQMKD\":\"%d\", \"OBDYNDCGQZ\":\"%.3f\", \"OBDFHBFB\":\"%d\", \"CNWD\":\"%.2f\", \"CNYNN\":\"%.2f\", \"BATV\":\"%.2f\",\"DWLX\":\"%d\",\"JZDW\":\"%d,%d,%d,%d\",\"GPSDW\":\"%.06f,%.07f\"},{\"bookdata\":\"0\"}]}\r\n\0",
     ROLLER_PHONE_NUM,
     can_car_RPM,
     can_car_VSS,
@@ -377,7 +394,14 @@ uint8_t GSM_GPRSPushCarStatus(void)
     can_car_load_PCT,
     adc_converted_temp_voltage,
     acd_converted_o2_voltage,
-    car_battery_voltage);
+    car_battery_voltage,
+    position_type,
+    mcc,
+    mnc,
+    cellid,
+    lac,
+    longitude,
+    latitude);
   sprintf((char*)gsm_snd_datas, 
     "POST %s %s\r\n%s\r\n%s\r\nContent-Length: %d\r\n%s\r\n%s\r\nHost: %s:80\r\n%s\r\n\r\n%s",
     ROLLER_ADDR2,
@@ -468,6 +492,29 @@ uint8_t GSM_CheckCarBatteryVoltage(void)
     return err;
 }
 
+uint8_t GSM_CheckBTSPosition(void)
+{
+    uint8_t err = 0;
+    GSM_SendAT("AT+CENG=1,0");
+    err = GSM_WaitForMsg("OK", 2);
+    if(err != 0) {
+        return err;
+    }
+
+    GSM_SendAT("AT+CENG?");
+    err = GSM_WaitForMsg("+CENG:", 2);
+    if(err != 0) {
+        return err;
+    }
+
+    ParserCENG();
+    GSM_SendAT("AT+CENG=0,0");
+    err = GSM_WaitForMsg("OK", 2);
+    if(err != 0) {
+        return err;
+    }    
+    return err;
+}
 
 void GSM_DataReset(void)
 {
@@ -581,6 +628,159 @@ static uint16_t ParserCADC(void)
     }
 
     return voltage;
+}
+
+/* 
+AT+CENG?
+
++CENG:0,"0058,36,99,460(mcc),00(mnc),58(bsic),56cd(cellid22221),12,05,3361(lac),255"
+
++CENG:1,"0072(arfcn),10(rxl),43(bsic),278b(cellid),460(mcc),00(mnc),3339(lac)"
+
++CENG:2,"0062,06,20,50c1,460,00,3361"
+
++CENG:3,"0524,07,50,2b71,460,00,3339"
+
++CENG:4,"0070,10,52,27a7,460,00,3339"
+
++CENG:5,"0057,19,127,ffff,000,00,0"
+
++CENG:6,"0076,10,104,ffff,000,00,0"
+
+
+*/
+void ParserCENG(void)
+{
+    uint8_t i = 0;
+    char *p = NULL;  
+    uint16_t tmp = 0;
+
+    mcc = 0;
+    mnc = 0;
+    cellid = 0;
+    lac = 0;
+
+
+    /* Find Current cell */
+    p = strchr((char *)gsm_rcv_datas, '\"'); 
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p == ',')
+            break;
+    }
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p == ',')
+            break;
+    }
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p == ',')
+            break;
+    }
+
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p > 0x2F && *p < 0x3A) {
+            mcc *= 10;
+            mcc += *p - 0x30;
+        }
+        else if(*p == ',')
+            break; 
+    }  
+
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p > 0x2F && *p < 0x3A) {
+            mnc *= 10;
+            mnc += *p - 0x30;
+        }
+        else if(*p == ',')
+            break; 
+    }
+
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p == ',')
+            break;
+    }
+
+    for(i = 0; i < 5; i++) {
+        p++;
+        if((*p > 0x2F && *p < 0x3A) || (*p >= 'a' && *p <= 'f') || (*p >= 'A' && *p <= 'F')) {
+            switch(*p)
+            {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                tmp = *p - 0x30;
+                break;
+            case 'a':
+            case 'A':
+                tmp = 10;
+                break;
+            case 'b':
+            case 'B':
+                tmp = 11;
+                break;
+            case 'c':
+            case 'C':
+                tmp = 12;
+                break;
+            case 'd':
+            case 'D':
+                tmp = 13;
+                break;
+            case 'e':
+            case 'E':
+                tmp = 14;
+                break;
+            case 'f':
+            case 'F':
+                tmp = 15;
+                break;
+            default:
+                tmp = 0;
+                break;
+            }
+            cellid *= 16;
+            cellid += tmp;
+        }
+        else if(*p == ',')
+            break; 
+    }
+
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p == ',')
+            break;
+    }
+
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p == ',')
+            break;
+    }    
+
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p > 0x2F && *p < 0x3A) {
+            lac *= 10;
+            lac += *p - 0x30;
+        }
+        else if(*p == ',')
+            break; 
+    }
+
+    //INFO("mcc=%d,mnc=%d,cellid=%x,lac=%d\r\n",mcc,mnc,cellid,lac);
+
 }
 
 

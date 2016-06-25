@@ -75,7 +75,8 @@ void SPI1_Init(void)
 //    SPI_NVIC_Init();
 
     /* Enable SPI1  */
-    SPI_Cmd(SPI1, ENABLE);
+    SPI_Cmd(SPI1, ENABLE);  
+    SPI_I2S_ClearITPendingBit(SPI1, SPI_I2S_IT_RXNE);
             
 }   
 
@@ -98,7 +99,25 @@ uint8_t SPI1_GetByte(uint8_t cmd)
 
   /* Wait to receive a byte */
   while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET);
+  SPI_I2S_ReceiveData(SPI1);
+  SysTick_Delay_ms(10);
 
+  /* Loop while DR register in not emplty */
+  while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
+
+  /* Send byte through the SPI1 peripheral */
+  SPI_I2S_SendData(SPI1, cmd);
+
+  /* Wait to receive a byte */
+  while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET);  
+  SPI_I2S_ReceiveData(SPI1);
+  SysTick_Delay_ms(10);
+
+  /* Send byte through the SPI1 peripheral */
+  SPI_I2S_SendData(SPI1, cmd);
+
+  /* Wait to receive a byte */
+  while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_RXNE) == RESET);  
   /* Return the byte read from the SPI bus */
   return SPI_I2S_ReceiveData(SPI1);
 }
@@ -108,7 +127,7 @@ void SPI1_IRQHandler(void)
     uint8_t c;
     if(SPI_I2S_GetFlagStatus(SPI1,SPI_I2S_FLAG_RXNE)==SET){
         c = SPI_I2S_ReceiveData(SPI1);
- //       INFO("%c",c);
+        INFO("%c",c);
     }
         
 }

@@ -98,7 +98,8 @@ void UART4_RX_MSG_Proc(void){
     if(UART4_DMA_RCVBUFFER_SIZE - res_len) {
         GSM_RetrieveData(uart4_dma_receivebuffer, (size_t)(UART4_DMA_RCVBUFFER_SIZE - res_len));
         if(DEBUG_GetPlayMode() & SYS_MODE_1TH4){
-            USART1_TX_DMA_Send(uart4_dma_receivebuffer, (size_t)(UART4_DMA_RCVBUFFER_SIZE - res_len));
+            //USART1_TX_DMA_Send(uart4_dma_receivebuffer, (size_t)(UART4_DMA_RCVBUFFER_SIZE - res_len));
+            //INFO("%s",uart4_dma_receivebuffer);
         }    
         DMA_Cmd(DMA2_Channel3, DISABLE); 
         DMA_SetCurrDataCounter(DMA2_Channel3, UART4_DMA_RCVBUFFER_SIZE);
