@@ -21,7 +21,7 @@
 #include <string.h>
 #include "stm32f10x.h"
 #include "usart1.h"
-#include "can.h"
+#include "obd.h"
 #include "systick.h"
 #include "tim2.h"
 #include "debug.h"
@@ -34,6 +34,7 @@
 #include "spi.h"
 #include "vcom.h"
 #include "nmealib.h"
+#include "ISO15765_4.h"
 
 static void INIT_All(void);
 static void SIM800C_PowerOn(void);
@@ -92,8 +93,9 @@ static void INIT_All(void)
     INFO("*                                             *\r\n"); 
     INFO("***********************************************\r\n"); 
 
-    CAN_ProtocolScan();
-    I2C_LMP91000_Init();
+    ISO15765_4_ProtocolDetect();
+
+    //I2C_LMP91000_Init();
     SPI1_Init();
 
 }
@@ -108,7 +110,7 @@ static void SIM800C_PowerOn(void)
             INFO("\r\n GSM Power ON!");
         }
         else {
-            ERROR("\r\n GSM Power ON failed!");
+            ROLLER_ERROR("\r\n GSM Power ON failed!");
             SYS_Reset();
         }
         /* No echo */
@@ -139,12 +141,11 @@ static void Event_Polling(void)
     cnt = TIM2_GetTick();
     if(DEBUG_GetPlayMode() & SYS_MODE_AUTO_CONN){
          if(cnt % 1000 == 0) {
-            CAN_CheckAllStatus(); 
             GPS_Position();
             
             err = GSM_CheckSignalStrength();
             if(0 != err) {
-                ERROR("\r\n GSM Signal failed!");
+                ROLLER_ERROR("\r\n GSM Signal failed!");
                 SYS_Reset();
             } 
             err = GSM_GPRSSendData();

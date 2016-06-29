@@ -30,6 +30,9 @@ void GPS_Position(void)
 {
     uint8_t i = 0;
     uint8_t data[68];
+    
+    double longitude;
+    double latitude;
 
     data[64] = 0x00;
     SPI1_GetByte(0x31);
@@ -59,6 +62,11 @@ void GPS_Position(void)
         GPS_data.lon.min,
         GPS_data.lon.minp1,
         GPS_data.lon.minp2);
-
+  if(GPS_data.lon.deg != 0)
+  {
+    longitude = (double)GPS_data.lon.deg + ((double)GPS_data.lon.min + (double)GPS_data.lon.minp1 / 100 + (double)GPS_data.lon.minp2 / 10000) / 60;
+    latitude = (double)GPS_data.lat.deg + ((double)GPS_data.lat.min + (double)GPS_data.lat.minp1 / 100 + (double)GPS_data.lat.minp2 / 10000) / 60;
+    INFO("\"GPSDW\":\"%.06f,%.07f\"",longitude, latitude);
+  }
 }
 

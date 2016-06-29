@@ -23,9 +23,9 @@
 #include "debug.h"
 #include "systick.h"
 #include "uart4.h"
-#include "can.h"
 #include "beeper.h"
 #include "gps.h"
+#include "ISO15765_4.h"
 
 /* PB5 -> GSM_PWRKEY */
 #define SIM800C_PWRKEY_ON()    GPIOB->BRR  = 0x00000020
@@ -135,7 +135,7 @@ uint8_t GSM_PowerOn(void)
             SysTick_Delay_ms(200);
             i++;
             if(i > 10) {
-                ERROR("\r\n GSM Power Failed !!! \r\n");
+                ROLLER_ERROR("\r\n GSM Power Failed !!! \r\n");
                 return 1;
             }
         }
@@ -225,6 +225,7 @@ uint8_t GSM_GPRSSendData(void)
 {
     uint8_t err = 0;
     uint8_t i = 0;
+    ErrorStatus errStatus;
     
     /* Network Registration Status  - CGREG: 0,3 OK*/
     GSM_SendAT("AT+CGREG?");
@@ -305,6 +306,15 @@ uint8_t GSM_GPRSSendData(void)
             INFO("\r\n Beeper Open OK!");
             break;
         }
+
+        err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"CCGZM\"}");
+        if(err == 0) {
+            ISO15765_4_CleanUpDTC(&errStatus);
+            INFO("\r\n DTC was cleaned up!");
+            break;
+        }
+
+        
         SysTick_Delay_ms(100);
         UART4_RX_MSG_Proc();
     }
@@ -331,23 +341,17 @@ extern uint32_t STM32_TEMP_AVE;
 
 uint8_t GSM_GPRSPushCarStatus(void)
 {
+  ErrorStatus errStatus;
   uint8_t err = 0; 
-  uint16_t can_car_RPM = *((uint16_t*)CAN_GetStatus(CAN_RPM));
-  uint16_t can_car_VSS = *((uint16_t*)CAN_GetStatus(CAN_VSS));
-  int16_t can_car_ECT = *((int16_t*)CAN_GetStatus(CAN_ECT));
-  uint16_t can_car_MAF = *((uint16_t*)CAN_GetStatus(CAN_MAF));
-  uint16_t can_car_MAP = *((uint16_t*)CAN_GetStatus(CAN_MAP));
-  uint16_t can_car_TP = *((uint16_t*)CAN_GetStatus(CAN_TP));
-  float can_car_O2B1S1 = *((float*)CAN_GetStatus(CAN_O2B1S1));  
-  uint16_t can_car_load_PCT = *((uint16_t*)CAN_GetStatus(CAN_LOAD_PCT));
   float acd_converted_o2_voltage;
   float adc_converted_temp_voltage;
  // float O2_persent;
   float car_battery_voltage = 0;
   uint8_t position_type = 0;
 
-  double longitude;
-  double latitude;
+  double longitude = 0;
+  double latitude = 0;
+  char tmp[128];
 
   GSM_CheckCarBatteryVoltage();
   GSM_CheckBTSPosition();
@@ -380,28 +384,85 @@ uint8_t GSM_GPRSPushCarStatus(void)
     longitude = (double)GPS_data.lon.deg + ((double)GPS_data.lon.min + (double)GPS_data.lon.minp1 / 100 + (double)GPS_data.lon.minp2 / 10000) / 60;
     latitude = (double)GPS_data.lat.deg + ((double)GPS_data.lat.min + (double)GPS_data.lat.minp1 / 100 + (double)GPS_data.lat.minp2 / 10000) / 60;     
   }
-    
   sprintf((char*)gsm_json_datas,
-    "{\"DATA\":[{\"pn\":\"%s\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",\"OBDZS\":\"%d\", \"OBDCS\":\"%d\", \"OBDSW\":\"%d\", \"OBDKQLL\":\"%d\", \"OBDQGJDYL\":\"%d\", \"OBDJQMKD\":\"%d\", \"OBDYNDCGQZ\":\"%.3f\", \"OBDFHBFB\":\"%d\", \"CNWD\":\"%.2f\", \"CNYNN\":\"%.2f\", \"BATV\":\"%.2f\",\"DWLX\":\"%d\",\"JZDW\":\"%d,%d,%d,%d\",\"GPSDW\":\"%.06f,%.07f\"},{\"bookdata\":\"0\"}]}\r\n\0",
-    ROLLER_PHONE_NUM,
-    can_car_RPM,
-    can_car_VSS,
-    can_car_ECT,
-    can_car_MAF,
-    can_car_MAP,
-    can_car_TP,
-    can_car_O2B1S1,
-    can_car_load_PCT,
-    adc_converted_temp_voltage,
-    acd_converted_o2_voltage,
-    car_battery_voltage,
-    position_type,
+    "{\"DATA\":[{\"pn\":\"%s\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",",
+    ROLLER_PHONE_NUM);
+  sprintf(tmp,
+    "\"OBDZS\":\"%s\",",
+    ISO15765_4_ReadDS(CAN_RPM, &errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"OBDCS\":\"%s\",",
+    ISO15765_4_ReadDS(CAN_VSS, &errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"OBDSW\":\"%s\",",
+    ISO15765_4_ReadDS(CAN_ECT, &errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);  
+
+  sprintf(tmp,
+    "\"OBDKQLL\":\"%s\",",
+    ISO15765_4_ReadDS(CAN_MAF, &errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"OBDQGJDYL\":\"%s\",",
+    ISO15765_4_ReadDS(CAN_MAP, &errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"OBDJQMKD\":\"%s\",",
+    ISO15765_4_ReadDS(CAN_TP, &errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+  
+  sprintf(tmp,
+    "\"OBDYNDCGQZ\":\"%s\",",
+    ISO15765_4_ReadDS(CAN_O2B1S1, &errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"OBDFHBFB\":\"%s\",",
+    ISO15765_4_ReadDS(CAN_LOAD_PCT, &errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"CNWD\":\"%.2f\",",
+    adc_converted_temp_voltage);
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"CNYNN\":\"%.2f\",",
+    acd_converted_o2_voltage);
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"BATV\":\"%.2f\",",
+    car_battery_voltage);
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"DWLX\":\"%d\",\"JZDW\":\"%d,%d,%d,%d\",\"GPSDW\":\"%.06f,%.07f\",",
+    position_type,    
     mcc,
     mnc,
     lac,
     cellid,
     longitude,
     latitude);
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"OBDCN\":\"%s\",",
+    ISO15765_4_ReadDS(CAN_DTC_CN, &errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
+  sprintf(tmp,
+    "\"OBDEC\":\"%s\"},{\"bookdata\":\"0\"}]}\r\n",
+    ISO15765_4_ReadDTC(&errStatus));
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
+
   sprintf((char*)gsm_snd_datas, 
     "POST %s %s\r\n%s\r\n%s\r\nContent-Length: %d\r\n%s\r\n%s\r\nHost: %s:80\r\n%s\r\n\r\n%s",
     ROLLER_ADDR2,

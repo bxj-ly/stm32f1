@@ -23,14 +23,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f10x_it.h"
-#include "usart1.h"
-#include "uart4.h"
-#include "can.h"
-#include "systick.h"
-#include "tim2.h"
-#include "debug.h"
-#include "gps.h"
-#include "gsm.h"
 
 /** @addtogroup STM32F10x_StdPeriph_Template
   * @{

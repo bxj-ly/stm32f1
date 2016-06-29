@@ -553,11 +553,6 @@
           <GroupName>Main</GroupName>
           <Files>
             <File>
-              <FileName>can.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Main\src\can.c</FilePath>
-            </File>
-            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Main\src\main.c</FilePath>
@@ -626,6 +621,26 @@
               <FileName>vcom.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Main\src\vcom.c</FilePath>
+            </File>
+            <File>
+              <FileName>nmealib.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Main\src\nmealib.c</FilePath>
+            </File>
+            <File>
+              <FileName>obd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Main\src\obd.c</FilePath>
+            </File>
+            <File>
+              <FileName>formula.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Main\src\formula.c</FilePath>
+            </File>
+            <File>
+              <FileName>ISO15765_4.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Main\src\ISO15765_4.c</FilePath>
             </File>
           </Files>
         </Group>

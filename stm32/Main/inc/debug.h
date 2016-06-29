@@ -10,12 +10,12 @@
 #ifdef __DEBUG__  
 #define INFO(format,...) printf(format, ##__VA_ARGS__)  
 #define DEBUG(format,...) printf(format, ##__VA_ARGS__)  
-#define ERROR(format,...) printf("%s#%s()#%u : " format,             \
+#define ROLLER_ERROR(format,...) printf("%s#%s()#%u : " format,             \
             __FILE__, __FUNCTION__, __LINE__, ## __VA_ARGS__) 
 #else  
 #define INFO(format,...) printf(format, ##__VA_ARGS__)
 #define DEBUG(format,...)
-#define ERROR(format,...) printf("%s#%s()#%u : " format,             \
+#define ROLLER_ERROR(format,...) printf("%s#%s()#%u : " format,             \
             __FILE__, __FUNCTION__, __LINE__, ## __VA_ARGS__) 
 #endif 
 
