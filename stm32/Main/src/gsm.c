@@ -26,6 +26,7 @@
 #include "beeper.h"
 #include "gps.h"
 #include "ISO15765_4.h"
+#include "spi.h"
 
 /* PB5 -> GSM_PWRKEY */
 #define SIM800C_PWRKEY_ON()    GPIOB->BRR  = 0x00000020
@@ -295,15 +296,17 @@ uint8_t GSM_GPRSSendData(void)
 
         err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPOPEN\"}");
         if(err == 0) {
-            BEEPER_ON();
+            //BEEPER_ON();
+            SPI1_GetByte(0x17);
             INFO("\r\n Beeper Open OK!");
             break;
         }     
 
         err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPCLOSE\"}");
         if(err == 0) {
-            BEEPER_OFF();
-            INFO("\r\n Beeper Open OK!");
+            //BEEPER_OFF();
+            SPI1_GetByte(0x14);
+            INFO("\r\n Beeper Close OK!");
             break;
         }
 
@@ -454,7 +457,7 @@ uint8_t GSM_GPRSPushCarStatus(void)
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
-    "\"OBDCN\":\"%s\",",
+    "\"OBDECN\":\"%s\",",
     ISO15765_4_ReadDS(CAN_DTC_CN, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
