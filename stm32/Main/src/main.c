@@ -95,7 +95,7 @@ static void INIT_All(void)
 
     ISO15765_4_ProtocolDetect();
 
-    //I2C_LMP91000_Init();
+    I2C_LMP91000_Init();
     SPI1_Init();
 
 }
@@ -156,6 +156,7 @@ static void Event_Polling(void)
                 if(err > 0)
                     SYS_Reset();
             }
+            ADC1_Filter();
         }
     }
     DBG_LED1_OFF();
