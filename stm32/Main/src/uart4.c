@@ -121,7 +121,7 @@ void UART4_IRQHandler(void)
     if(USART_GetITStatus(UART4, USART_IT_IDLE) != RESET) {
         c=UART4->SR;
         c=UART4->DR;
-        //UART4_RX_MSG_Proc();
+        UART4_RX_MSG_Proc();
     }
 }
 

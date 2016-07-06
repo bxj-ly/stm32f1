@@ -20,5 +20,9 @@ uint8_t GSM_MsgQuickCheck(uint8_t *p);
 uint8_t GSM_CheckCarBatteryVoltage(void);
 uint8_t GSM_CheckBTSPosition(void);
 
+uint8_t BT_PowerOff(void);
+uint8_t BTFan_config(void);
+uint8_t BTFan_Open(void);
+uint8_t BTFan_Close(void);
 
 #endif  /*__GSM_H*/

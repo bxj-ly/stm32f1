@@ -27,6 +27,7 @@
 #include "gps.h"
 #include "ISO15765_4.h"
 #include "spi.h"
+#include "sys_init.h"
 
 /* PB5 -> GSM_PWRKEY */
 #define SIM800C_PWRKEY_ON()    GPIOB->BRR  = 0x00000020
@@ -39,7 +40,7 @@
 #define ROLLER_HOST "www.hwytree.com"
 #define ROLLER_ADDR1 "http://www.hwytree.com/roller1.asp"
 #define ROLLER_ADDR2 "http://www.hwytree.com/roller2.asp"
-#define ROLLER_PHONE_NUM "13312345678"
+#define ROLLER_PHONE_NUM "13012345678"
 #define ROLLER_HTTP_PROTOCOL "HTTP/1.1"
 #define ROLLER_USER_AGENT "User-Agent: Roller"
 
@@ -54,14 +55,23 @@ uint16_t mnc = 0;
 uint16_t cellid = 0;
 uint16_t lac = 0;
 
+#define BT_DEV_NAME "SPP-CA"
+uint16_t bt_fan_device_id;
+uint16_t bt_fan_profile_id;
+
 static uint16_t gsm_rcv_data_cnt = 0;
 static uint8_t gsm_rcv_datas[GSM_MAX_DATA_SIZE];
 static uint8_t gsm_snd_datas[GSM_MAX_DATA_SIZE];
 static uint8_t gsm_json_datas[GSM_MAX_DATA_SIZE];
 
+static void set_fixed_baudrate(void);
 static uint8_t ParserCSQ(void);
 static uint16_t ParserCADC(void);
 static void ParserCENG(void);
+static uint8_t ParserBTFanDeviceID(void);
+static uint8_t ParserBTFanProfileID(void);
+static uint8_t ParserBTStatus(void);
+
 
 /* send AT command */
 void GSM_SendAT(uint8_t *data)
@@ -90,6 +100,13 @@ void GSM_SendATData(uint8_t *data)
     }
     UART4_SendByte(0x1A);  
     GSM_DataReset();
+}
+
+void GSM_DataReset(void)
+{
+    /* reset status */
+    gsm_rcv_data_cnt=0;
+    memset(gsm_rcv_datas, 0x00, GSM_MAX_DATA_SIZE);
 }
 
 /* retrieve data from UART4 DMA buffer */
@@ -169,7 +186,10 @@ uint8_t GSM_PowerOn(void)
         //SysTick_Delay_ms(5000);
         err = GSM_WaitForMsg("SMS Ready", 60);
         if(err > 0)
+        {
+          set_fixed_baudrate();
           return err; 
+        }
 
     }
     else  {
@@ -187,8 +207,6 @@ uint8_t GSM_PowerOn(void)
         } 
 #endif    
     }
-
-    DBG_LED2_ON();
 
     return 0;
 
@@ -285,7 +303,8 @@ uint8_t GSM_GPRSSendData(void)
       return err;   
 
     SysTick_Delay_ms(100);
-    UART4_RX_MSG_Proc();
+   // UART4_RX_MSG_Proc();
+   // INFO("%s\r\n",gsm_rcv_datas);
 
     for(i = 0; i < 20; i++) {
         err = GSM_MsgQuickCheck("CXALL");
@@ -296,7 +315,7 @@ uint8_t GSM_GPRSSendData(void)
 
         err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPOPEN\"}");
         if(err == 0) {
-            //BEEPER_ON();
+            /* Beeper ON */
             SPI1_GetByte(0x17);
             INFO("\r\n Beeper Open OK!");
             break;
@@ -304,7 +323,7 @@ uint8_t GSM_GPRSSendData(void)
 
         err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BPCLOSE\"}");
         if(err == 0) {
-            //BEEPER_OFF();
+            /* Beeper OFF */
             SPI1_GetByte(0x14);
             INFO("\r\n Beeper Close OK!");
             break;
@@ -317,9 +336,33 @@ uint8_t GSM_GPRSSendData(void)
             break;
         }
 
-        
+        err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BLOPEN\"}");
+        if(err == 0) {
+            BTFan_config();
+            INFO("\r\n BT Power ON!");
+            break;
+        }
+        err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"BLCLOSE\"}");
+        if(err == 0) {
+            BT_PowerOff();
+            INFO("\r\n BT Power OFF!");
+            break;
+        }
+        err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"EBLOPEN\"}");
+        if(err == 0) {
+            BTFan_Open();
+            INFO("\r\n BT FAN OPEN!");
+            break;
+        }
+        err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"EBLCLOSE\"}");
+        if(err == 0) {
+            BTFan_Close();
+            INFO("\r\n BT FAN CLOSE!");
+            break;
+        }        
         SysTick_Delay_ms(100);
-        UART4_RX_MSG_Proc();
+        //INFO("%s\r\n",gsm_rcv_datas);
+      //  UART4_RX_MSG_Proc();
     }
 
 #if 0
@@ -431,12 +474,12 @@ uint8_t GSM_GPRSPushCarStatus(void)
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
-    "\"CNWD\":\"%.2f\",",
+    "\"CNWD\":\"%.3f\",",
     adc_converted_temp_voltage);
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
-    "\"CNYNN\":\"%.2f\",",
+    "\"CNYNN\":\"%.3f\",",
     acd_converted_o2_voltage);
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
@@ -503,28 +546,30 @@ uint8_t GSM_WaitForMsg(uint8_t *p, uint32_t timeout)
     uint32_t cnt = 0;
     uint8_t err = 1;
 
-    UART4_RX_MSG_Proc();
     SysTick_Delay_ms(100);
     timeout *= 10;
     while(cnt < timeout) {
         if(gsm_rcv_data_cnt > 0) {
             p_find = strstr((char*)gsm_rcv_datas, (char*)p);
             if(NULL != p_find) {
+                INFO("%s\r\n",gsm_rcv_datas);
                 err = 0;
                 break;
             }
 
             p_find = strstr((char*)gsm_rcv_datas, "ERROR");
             if(NULL != p_find) {
+                INFO("%s\r\n",gsm_rcv_datas);
                 err = 2;
                 break;
             }
         }
-        UART4_RX_MSG_Proc();
         SysTick_Delay_ms(100);
         cnt++;
     }
 
+    /* timeout ? */
+    if(1 == err) INFO("%s\r\n",gsm_rcv_datas);
     return err;
 } 
 
@@ -580,12 +625,206 @@ uint8_t GSM_CheckBTSPosition(void)
     return err;
 }
 
-void GSM_DataReset(void)
+uint8_t BT_PowerOff(void)
 {
-    /* reset status */
-    gsm_rcv_data_cnt=0;
-    memset(gsm_rcv_datas, 0x00, GSM_MAX_DATA_SIZE);
+    uint8_t err = 0;
+    
+    GSM_SendAT("AT+BTPOWER=0");
+    err = GSM_WaitForMsg("OK", 10);
+    if(err > 0)
+        return err;  
+    return err;
 }
+
+uint8_t BTFan_config(void)
+{
+    uint8_t err = 0;
+    uint8_t retry = 0;
+    uint8_t bt_status = 0;
+    char buff[32];
+
+    DBG_LED2_OFF();
+BT_POWERON:
+    GSM_SendAT("AT+BTPOWER=1"); 
+    err = GSM_WaitForMsg("OK", 10);
+    if(err > 0)
+    {
+        GSM_SendAT("AT+BTPOWER=0");
+        SysTick_Delay_ms(30000);
+        goto BT_POWERON;
+
+    }
+
+    GSM_SendAT("AT+BTSTATUS?"); 
+    err = GSM_WaitForMsg("OK", 10);
+    if(err > 0)
+        return err;     
+
+    bt_status = ParserBTStatus();
+    INFO("BT stauts=%d\r\n", bt_status);
+    switch(bt_status)
+    {
+    case 1:
+        GSM_SendAT("AT+BTUNPAIR=0"); 
+        err = GSM_WaitForMsg("OK", 10);
+        if(err > 0)
+            return err; 
+
+        break;
+    case 2:    
+        GSM_SendAT("AT+BTUNPAIR=0"); 
+        err = GSM_WaitForMsg("OK", 10);
+        if(err > 0)
+            return err; 
+
+        break;
+    case 0:
+    default:   
+        break;
+    }
+
+    GSM_SendAT("AT+BTSTATUS?"); 
+    err = GSM_WaitForMsg("OK", 10);
+    if(err > 0)
+        return err; 
+
+    retry = 0;
+BT_SCAN:
+    retry++;
+    GSM_SendAT("AT+BTSCAN=1,60"); 
+    err = GSM_WaitForMsg("+BTSCAN: 1", 80);
+    if(err > 0)
+        return err;
+
+    err = ParserBTFanDeviceID();
+    if(err > 0)
+    {
+        if(retry > 2)
+            return err; 
+        else
+            goto BT_SCAN;
+    }
+
+    sprintf(buff, "AT+BTPAIR=0,%u", bt_fan_device_id);
+    GSM_SendAT((uint8_t *)buff); 
+    err = GSM_WaitForMsg(BT_DEV_NAME, 10);
+    if(err > 0)
+        return err;
+
+    GSM_SendAT("AT+BTPAIR=2,1234"); 
+    err = GSM_WaitForMsg(BT_DEV_NAME, 10);
+    if(err > 0)
+        return err;
+
+    SysTick_Delay_ms(1000);
+
+    GSM_SendAT("AT+BTSTATUS?"); 
+    err = GSM_WaitForMsg(BT_DEV_NAME, 10);
+    if(err > 0)
+        return err;    
+
+    SysTick_Delay_ms(1000);
+    retry = 0;
+BT_GETPROFILE:
+    retry++;
+    GSM_SendAT("AT+BTGETPROF=1"); 
+    err = GSM_WaitForMsg("OK", 60);
+    if(err > 0)
+        return err; 
+
+    err = ParserBTFanProfileID();
+    if(err > 0)
+    {
+        if(retry > 3)
+            return err; 
+        else
+            goto BT_GETPROFILE;
+    }
+
+    sprintf(buff, "AT+BTCONNECT=%u,%u", bt_fan_device_id, bt_fan_profile_id);
+    GSM_SendAT((uint8_t *)buff); 
+    err = GSM_WaitForMsg("+BTCONNECT:", 60);
+    if(err > 0)
+        return err;  
+
+    GSM_SendAT("AT+BTSTATUS?"); 
+    err = GSM_WaitForMsg("OK", 10);
+    if(err > 0)
+        return err; 
+
+    DBG_LED2_ON();
+    return 0; 
+}
+
+uint8_t BTFan_Open(void)
+{
+    uint8_t err = 0;
+
+    GSM_SendAT("AT+BTSPPSEND"); 
+    err = GSM_WaitForMsg(">",2);
+    if(err > 0)
+      return err; 
+
+    UART4_SendByte(0xCC);
+    UART4_SendByte(0x00);
+    UART4_SendByte(0x00);
+    UART4_SendByte(0x00);
+    UART4_SendByte(0xEE);
+    UART4_SendByte(0x1A);
+    GSM_DataReset();
+
+    return err; 
+}
+
+uint8_t BTFan_Close(void)
+{
+    uint8_t err = 0;
+
+    GSM_SendAT("AT+BTSPPSEND"); 
+    err = GSM_WaitForMsg(">",2);
+    if(err > 0)
+      return err; 
+
+    UART4_SendByte(0xCC);
+    UART4_SendByte(0x01);
+    UART4_SendByte(0x00);
+    UART4_SendByte(0x00);
+    UART4_SendByte(0xEE);
+    UART4_SendByte(0x1A);
+    GSM_DataReset();
+
+    return err; 
+}
+
+
+static void set_fixed_baudrate(void)
+{
+    uint8_t i = 0;
+    uint8_t err = 1;
+
+    for(i = 0; i < 200; i++)
+    {
+        /* No echo */
+        GSM_SendAT("AT");
+        err = GSM_WaitForMsg("OK",2);  
+        if(err == 0) break;
+    }
+
+    if(i == 200) SYS_Reset();
+
+
+    GSM_SendAT("AT+IPR=115200");
+    err = GSM_WaitForMsg("OK",2);  
+    if(err > 0)
+        SYS_Reset();
+ 
+
+    GSM_SendAT("AT&W");
+    GSM_WaitForMsg("OK",2);  
+    SYS_Reset();
+     
+}
+
 
 /* Signal Quality Report 
 Response
@@ -887,6 +1126,92 @@ void ParserCENG(void)
 
     //INFO("mcc=%d,mnc=%d,cellid=%x,lac=%d\r\n",mcc,mnc,cellid,lac);
 
+}
+
+/*
+AT+BTSCAN=1,10
+
+OK
+
++BTSCAN: 0,1,"SPP-CA",00:ba:55:57:71:dd,-57
+
++BTSCAN: 1
+*/
+
+static uint8_t ParserBTFanDeviceID(void)
+{
+    uint8_t i = 0;
+    uint8_t err = 0;
+    char *p = NULL;  
+    p = strstr((char *)gsm_rcv_datas, BT_DEV_NAME); 
+    if(NULL == p)
+        return 1;
+    while(*p != ',') p--;
+    p--;
+    while(*p != ',') p--;
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p > 0x2F && *p < 0x3A) {
+            bt_fan_device_id *= 10;
+            bt_fan_device_id += *p - 0x30;
+        }
+        else if(*p == ',')
+            break;
+    }
+    INFO("bt_fan_device_id=%d\r\n",bt_fan_device_id);
+
+    return err;
+}
+
+/*
+AT+BTGETPROF=1
+
++BTGETPROF: 4,"SPP"
+
+OK
+*/
+
+static uint8_t ParserBTFanProfileID(void)
+{
+    uint8_t i = 0;
+    uint8_t err = 0;
+    char *p = NULL;  
+
+    p = strchr((char *)gsm_rcv_datas, ':'); 
+    for(i = 0; i < 5; i++) {
+        p++;
+        if(*p > 0x2F && *p < 0x3A) {
+            bt_fan_profile_id *= 10;
+            bt_fan_profile_id += *p - 0x30;
+        }
+        else if(*p == ',')
+            break;
+    }
+
+    return err;
+}
+
+/*
++BTSTATUS: 5
+P: 1,"SPP-CA",00:ba:55:57:71:d0
+C:
+OK
+
+*/
+
+static uint8_t ParserBTStatus(void)
+{
+    char *p = NULL;  
+
+    p = strstr((char *)gsm_rcv_datas, "C:"); 
+    if(NULL != p)
+        return 2;
+
+    p = strstr((char *)gsm_rcv_datas, "P:"); 
+    if(NULL != p)
+        return 1;
+
+    return 0;
 }
 
 

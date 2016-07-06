@@ -20,35 +20,4 @@
  ******************************************************************************/
 #include "beeper.h"
 
-static uint8_t beeper_stauts = 1;
-
-uint8_t BEEPER_GetStatus(void)
-{
-    return beeper_stauts;
-}
-
-void BEEPER_ON(void)
-{
-    beeper_stauts = 1;
-    GPIO_SetBits(GPIOA, GPIO_Pin_5);
-}
-
-void BEEPER_OFF(void)
-{
-    beeper_stauts = 0;
-    GPIO_ResetBits(GPIOA, GPIO_Pin_5) ;
-}
-
-void BEEPER_GPIOConfiguration(void)
-{ 
-    GPIO_InitTypeDef GPIO_InitStructure;
-
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;    
-    GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-    GPIO_ResetBits(GPIOA, GPIO_Pin_5) ;
-}
-
 

@@ -22,7 +22,8 @@
 #include "lmp91000.h"
 #include "debug.h"
 
-#define ADC_O2_SAMPLE_NUM 512
+//#define ADC_O2_SAMPLE_NUM 512
+#define ADC_O2_SAMPLE_NUM 1
 #define ADC1_DR_Address    ((u32)0x40012400+0x4c)
 #define  REG_ADDRESS 0x00
 u8 I2c_Buf_Write[256];
@@ -31,8 +32,13 @@ u8 I2c_Buf_Write1[256];
 u8 I2c_Buf_Read1[256];
 u8 LMP91000S;
 
-__IO uint16_t ADC_ConvertedValue[ADC_O2_SAMPLE_NUM][2];
-uint32_t ADC_SAMPLE_AVE;
+#define  N   50               //sampling 50 times per channel
+#define  M  2               //total 2 channels
+
+vu16  AD_Value[N][M];   //DMA object address
+vu16  After_filter[M];    //average result
+int         i;
+uint32_t ADC_SAMPLE_AVE; 
 uint32_t STM32_TEMP_AVE;
 //__IO u16 ADC_ConvertedValueLocal;
 
@@ -72,12 +78,12 @@ static void ADC1_Mode_Config(void)
 
   /* DMA channel1 configuration */
   DMA_DeInit(DMA1_Channel1);
-  DMA_InitStructure.DMA_PeripheralBaseAddr = ADC1_DR_Address;	 
-  DMA_InitStructure.DMA_MemoryBaseAddr = (u32)ADC_ConvertedValue;
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (u32)&ADC1->DR;
+  DMA_InitStructure.DMA_MemoryBaseAddr = (u32)&AD_Value;
   DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-  DMA_InitStructure.DMA_BufferSize = ADC_O2_SAMPLE_NUM;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_MemoryInc_Enable;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;  
+  DMA_InitStructure.DMA_BufferSize = N*M;
+	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable; 
   DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;	
   DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
   DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;		
@@ -89,9 +95,9 @@ static void ADC1_Mode_Config(void)
   DMA_Cmd(DMA1_Channel1, ENABLE);
 
   /* ADC1 configuration */
-
+  ADC_DeInit(ADC1);  // reset to default config
   ADC_InitStructure.ADC_Mode = ADC_Mode_Independent;	
-  ADC_InitStructure.ADC_ScanConvMode = DISABLE ; 	
+  ADC_InitStructure.ADC_ScanConvMode = ENABLE ; 	
   ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;	
   ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_None;	
   ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right; 	
@@ -135,24 +141,31 @@ static void ADC1_NVIC_Config(void)
 
 //  DMA_ITConfig(DMA1_Channel1,DMA_IT_TC,ENABLE); 
 }
+
+
 void ADC1_Filter(void)
 {
-  uint32_t  sum = 0;
-  uint32_t i;
+          int  sum = 0;
+        u8  count;    
+          for(i=0;i<2;i++)
 
-  for ( i=0;i<ADC_O2_SAMPLE_NUM;i++)
-  {
-     sum += ADC_ConvertedValue[i][0];
-  }
-  ADC_SAMPLE_AVE = sum/ADC_O2_SAMPLE_NUM;  
+      {
 
-  sum = 0;
-  for ( i=0;i<ADC_O2_SAMPLE_NUM;i++)
-  {
-     sum += ADC_ConvertedValue[i][1];
-  } 
+         for ( count=0;count<N;count++)
 
-  STM32_TEMP_AVE = sum/ADC_O2_SAMPLE_NUM; 
+          {
+
+           sum += AD_Value[count][i];
+
+          }
+
+          After_filter[i]=sum/N;
+
+          sum=0;
+      }
+			ADC_SAMPLE_AVE = After_filter[0] ;
+			STM32_TEMP_AVE = After_filter[1] ;
+
 }
 
 void DMA1_Channel1_IRQHandler(void)
@@ -370,8 +383,9 @@ void I2C_LMP91000_Init(void)
   ADC1_Mode_Config();
   ADC1_NVIC_Config();
   LMP91000S = 0x00  ;
-
   I2C_LMP91000_CONFIG();
+	ADC_SoftwareStartConvCmd(ADC1, ENABLE);
+	DMA_Cmd(DMA1_Channel1, ENABLE); 
 }
 
 

@@ -44,7 +44,6 @@ static void Event_Polling(void);
 int main(void)
 {
     INIT_All();
-    SIM800C_PowerOn();
 
     for(;;)
     {   
@@ -74,7 +73,6 @@ static void INIT_All(void)
     USART1_DMA_Config();
 #endif
 
-
     UART4_Config();
     UART4_DMA_Config(); 
 
@@ -82,7 +80,6 @@ static void INIT_All(void)
  #if defined(VIRTUALCOM_AS_DEBUG_COM)
     VCOM_Config();
 #endif   
-    //BEEPER_GPIOConfiguration();
 
     DBG_LED1_OFF();
     DBG_LED2_OFF();
@@ -97,6 +94,9 @@ static void INIT_All(void)
 
     I2C_LMP91000_Init();
     SPI1_Init();
+
+    SIM800C_PowerOn();
+    BTFan_config();
 
 }
 
@@ -127,8 +127,8 @@ static void UART_MSG_Polling(void)
     //       1,Need a Message Pool or Message Queue or FIFO for  the efficiency and robust of sending and receiving buffers  
     //       2,Error and warning Monitor for receiving a lot message overflow the receive buffer. (Using TC HT interrupt handler)   
     //       3,message retreat middle layer  like "playmode controller".    
-    USART1_RX_MSG_Proc();
-    UART4_RX_MSG_Proc();
+    //USART1_RX_MSG_Proc();
+    //UART4_RX_MSG_Proc();
 }
 
 static void Event_Polling(void)

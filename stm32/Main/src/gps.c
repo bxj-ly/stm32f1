@@ -66,7 +66,7 @@ void GPS_Position(void)
   {
     longitude = (double)GPS_data.lon.deg + ((double)GPS_data.lon.min + (double)GPS_data.lon.minp1 / 100 + (double)GPS_data.lon.minp2 / 10000) / 60;
     latitude = (double)GPS_data.lat.deg + ((double)GPS_data.lat.min + (double)GPS_data.lat.minp1 / 100 + (double)GPS_data.lat.minp2 / 10000) / 60;
-    INFO("\"GPSDW\":\"%.06f,%.07f\"",longitude, latitude);
+    INFO("\"GPSDW\":\"%.06f,%.07f\"\r\n",longitude, latitude);
   }
 }
 
