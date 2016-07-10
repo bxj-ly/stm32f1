@@ -20,6 +20,7 @@
  ******************************************************************************/
 #include "spi.h"
 #include "debug.h"
+#include "systick.h"
 
 void SPI_NVIC_Init(void){
     NVIC_InitTypeDef NVIC_InitStructure;

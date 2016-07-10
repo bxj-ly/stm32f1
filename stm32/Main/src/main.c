@@ -30,7 +30,7 @@
 #include "gsm.h"
 #include "gps.h"
 #include "lmp91000.h"
-#include "beeper.h"
+#include "kline.h"
 #include "spi.h"
 #include "vcom.h"
 #include "nmealib.h"
@@ -65,6 +65,8 @@ int main(void)
 
 static void INIT_All(void) 
 {
+    ErrorStatus err;
+
     RCC_Configuration();
     GPIO_Configuration(); 
 
@@ -83,6 +85,7 @@ static void INIT_All(void)
 
     DBG_LED1_OFF();
     DBG_LED2_OFF();
+    DBG_LED2_ON();
     INFO("\r\n");
     INFO("***********************************************\r\n"); 
     INFO("*                                             *\r\n"); 
@@ -90,7 +93,7 @@ static void INIT_All(void)
     INFO("*                                             *\r\n"); 
     INFO("***********************************************\r\n"); 
 
-    ISO15765_4_ProtocolDetect();
+    OBD_ProtocolDetect(&err);
 
     I2C_LMP91000_Init();
     SPI1_Init();
@@ -157,6 +160,7 @@ static void Event_Polling(void)
                     SYS_Reset();
             }
             ADC1_Filter();
+            //OBD_KeepLink();
         }
     }
     DBG_LED1_OFF();

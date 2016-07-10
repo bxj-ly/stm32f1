@@ -24,6 +24,9 @@
 #include "systick.h"
 #include "obd.h"
 #include "formula.h"
+#include "ISO15765_4.h"
+#include "kline.h"
+
 
 /************************************************************************
   * @
@@ -323,6 +326,311 @@ void SaveData(CanRxMsg* RxMessage)
     FLCAN = 0;
     FI = 0;
   }
+}
+
+static OBD_PROTOCOL obd_protocol = OBD_PROTOCOL_UNKNOWN;
+void OBD_ProtocolDetect(ErrorStatus *err)
+{
+    switch(ISO15765_4_ProtocolDetect(err))
+    {
+    case ISO15765_4STD_500K: 
+        obd_protocol = OBD_ISO15765_4STD_500K;
+        *err = SUCCESS;
+        return; 
+    case ISO15765_4EXT_500K: 
+        obd_protocol = OBD_ISO15765_4EXT_500K;
+        *err = SUCCESS;
+        return;     
+    case ISO15765_4STD_250K: 
+        obd_protocol = OBD_ISO15765_4STD_250K;
+        *err = SUCCESS;
+        return;     
+    case ISO15765_4EXT_250K:
+        obd_protocol = OBD_ISO15765_4EXT_250K;
+        *err = SUCCESS;
+        return;     
+    case ISO15765_4_TYPE_UNKNOWN:
+    default:
+        break;
+
+    }
+
+    switch(KLINE_ProtocolDetect(err))
+    {
+    case ISO14230_4ADDR:
+        INFO("ISO14230_4ADDR\r\n");
+        obd_protocol = OBD_ISO14230_4ADDR;
+        *err = SUCCESS;
+        return;
+
+    case ISO14230_4HL:
+        INFO("ISO14230_4HL\r\n");
+        obd_protocol = OBD_ISO14230_4HL;
+        *err = SUCCESS;
+        return;
+
+    case ISO9141_2ADDR:
+        INFO("ISO9141_2ADDR\r\n");
+        obd_protocol = OBD_ISO9141_2ADDR;
+        *err = SUCCESS;
+        return;    
+        
+    case UNKNOWN_PROTOCOL:
+    default:
+        INFO("UNKNOWN_PROTOCOL\r\n");
+        break;
+    }
+  
+    obd_protocol = OBD_PROTOCOL_UNKNOWN;
+    *err = ERROR;
+    return;
+
+}
+
+OBD_PROTOCOL OBD_GetProtocol(void)
+{
+    return obd_protocol;
+}
+
+char* OBD_ReadDS(ISO15765_4_DS cmd, ErrorStatus* err)
+{
+    switch(obd_protocol)
+    {
+    case OBD_ISO14230_4ADDR:
+    case OBD_ISO14230_4HL:
+        return ISO14230_4ADDR_ReadDS(cmd, err);
+
+    case OBD_ISO9141_2ADDR:
+        return ISO9141_2ADDR_ReadDS(cmd, err);
+        
+    case OBD_ISO15765_4STD_500K:
+    case OBD_ISO15765_4EXT_500K:
+    case OBD_ISO15765_4STD_250K:
+    case OBD_ISO15765_4EXT_250K:
+
+        return ISO15765_4_ReadDS(cmd, err);
+    case OBD_PROTOCOL_UNKNOWN:
+    default:
+        *err = ERROR;
+        return "";
+
+    }  
+}
+
+void OBD_KeepLink(void)
+{
+    uint8_t kcount;
+    uint8_t kdata[7];
+
+    switch(obd_protocol)
+    {
+    case OBD_ISO14230_4ADDR:
+    case OBD_ISO14230_4HL:
+        for (kcount=0;kcount<3;kcount++)
+        {
+            if (ISO_14230_LINK_KEEP(kdata)==1)
+            {
+                break;
+            } 
+        }
+        break;
+
+
+    case OBD_ISO9141_2ADDR:
+        for (kcount=0;kcount<3;kcount++)
+        {
+            if (ISO_9141_2_LINK_KEEP(kdata)==1)
+            {
+                break;
+            } 
+        }
+        break;
+
+        
+    case OBD_ISO15765_4STD_500K:
+    case OBD_ISO15765_4EXT_500K:
+    case OBD_ISO15765_4STD_250K:
+    case OBD_ISO15765_4EXT_250K:
+    case OBD_PROTOCOL_UNKNOWN:
+    default:
+        break;
+    }
+
+}
+
+
+char* OBD_ISO14230_ReadRTC(ErrorStatus* err)
+{
+    uint8_t ram[255],i;
+    uint16_t dtc;
+    //uint8_t dtc_cnt;
+    ClearRAM((uint8_t*)DTCRAM,200);
+    //dtc_cnt = atoi(OBD_ReadDS(CAN_DTC_CN,err));
+    if (ISO_14230_DTC_READ(ram)==1)
+    {
+        for(i = 0;i < 128;i++)
+        {
+            INFO("0x%x ",ram[i]);
+        }
+        INFO("\r\n");
+        for(i = 0;i < 3;i++)
+    	{
+    	  dtc = (u16)(*(ram+4+2*i)<<8 | *(ram+5+2*i));
+    	  if (dtc != 0)
+    	  {
+    		strcpy((char*)(DTCRAM+strlen((char*)DTCRAM)),PCBU(dtc));
+            if( i != 3 - 1) strcpy((char*)(DTCRAM+strlen((char*)DTCRAM)),",");
+    	  }
+    	} 
+
+        *err = SUCCESS;
+    }
+    else
+        *err = ERROR;
+    return (char*)DTCRAM;
+
+}
+
+char* OBD_ISO9141_ReadRTC(ErrorStatus* err)
+{
+    uint8_t ram[255],i;
+    uint16_t dtc;
+    //uint8_t dtc_cnt;
+    ClearRAM((uint8_t*)DTCRAM,200);
+    //dtc_cnt = atoi(OBD_ReadDS(CAN_DTC_CN,err));
+    if (ISO_9141_2_DTC_READ(ram)==1)
+    {
+        for(i = 0;i < 128;i++)
+        {
+            INFO("0x%x ",ram[i]);
+        }
+        INFO("\r\n");    
+        for(i = 0;i < 3;i++)
+    	{
+    	  dtc = (u16)(*(ram+4+2*i)<<8 | *(ram+5+2*i));
+    	  if (dtc != 0)
+    	  {
+    		strcpy((char*)(DTCRAM+strlen((char*)DTCRAM)),PCBU(dtc));
+            if( i != 3 - 1) strcpy((char*)(DTCRAM+strlen((char*)DTCRAM)),",");
+    	  }
+    	} 
+
+        *err = SUCCESS;
+    }
+    else
+        *err = ERROR;
+    return (char*)DTCRAM;
+
+}
+
+char* OBD_ReadDTC(ErrorStatus* err)
+{
+    switch(obd_protocol)
+    {
+    case OBD_ISO14230_4ADDR:
+    case OBD_ISO14230_4HL:
+        return OBD_ISO14230_ReadRTC(err);
+
+    case OBD_ISO9141_2ADDR:
+        return OBD_ISO9141_ReadRTC(err);
+        
+    case OBD_ISO15765_4STD_500K:
+    case OBD_ISO15765_4EXT_500K:
+    case OBD_ISO15765_4STD_250K:
+    case OBD_ISO15765_4EXT_250K:
+        return ISO15765_4_ReadDTC(err);
+
+    case OBD_PROTOCOL_UNKNOWN:
+    default:
+        break;
+    }
+		
+    return "";
+}
+
+
+void OBD_CleanUpDTC(ErrorStatus* err)
+{
+    uint8_t kkw[2];
+    uint8_t kdata[7];
+    uint8_t i;
+
+    switch(obd_protocol)
+    {
+    case OBD_ISO14230_4ADDR:
+        for (i=0;i<3;i++)
+        {
+            if (ISO14230_4ADDR_start(kkw)==1)
+                break;
+        }
+
+        for(i = 0; i < 3; i++)
+        {
+            if (ISO_14230_DTC_CLEAR(kdata)==1)
+            {
+                *err = SUCCESS;
+                return;
+            }
+            else
+            {
+                *err = ERROR;
+            }
+        }
+        break;       
+    case OBD_ISO14230_4HL:
+
+        for (i=0;i<3;i++)
+        {
+            if (ISO14230_4HL_start(kdata)==1)
+                break;
+        }        
+        for(i = 0; i < 3; i++)
+        {
+            if (ISO_14230_DTC_CLEAR(kdata)==1)
+            {
+                *err = SUCCESS;
+                return;
+            }
+            else
+            {
+                *err = ERROR;
+            }
+        }
+        break;
+
+
+    case OBD_ISO9141_2ADDR:
+        for (i=0;i<3;i++)
+        {
+            if (ISO9141_2ADDR_start(kkw)==1)
+                break;
+        }        
+        for(i = 0; i < 3; i++)
+        {
+            if (ISO_9141_2_DTC_CLEAR(kdata)==1)
+            {
+                *err = SUCCESS;
+                return;
+            }
+            else
+            {
+                *err = ERROR;
+            }
+        }        
+
+        break;
+        
+    case OBD_ISO15765_4STD_500K:
+    case OBD_ISO15765_4EXT_500K:
+    case OBD_ISO15765_4STD_250K:
+    case OBD_ISO15765_4EXT_250K:
+        ISO15765_4_CleanUpDTC(err);
+        break;
+    case OBD_PROTOCOL_UNKNOWN:
+    default:
+        break;
+    }
+
 }
 
 

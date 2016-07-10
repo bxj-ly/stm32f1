@@ -38,17 +38,16 @@ CanTxMsg CDTCCmd15765 = {0x7DF,0x18DB33F1,CAN_ID_STD,CAN_RTR_DATA,8,0x01,0x04,0x
 CanTxMsg DSCmd15765   = {0x7DF,0x18DB33F1,CAN_ID_STD,CAN_RTR_DATA,8,0x02,0x01,0x00,0x00,0x00,0x00,0x00,0x00};
 /************************************************************************/
 
-ErrorStatus ISO15765_4_ProtocolDetect(void)
+ISO15765_4_TYPE ISO15765_4_ProtocolDetect(ErrorStatus *err)
 {
-    ErrorStatus err;
     uint8_t *ram;
     
     ISO15765_4_Config(ISO15765_4STD_500K);
-    ram = Send_CANFrame(&EntCmd15765,&err);
-    if (err == SUCCESS && 'A' == ram[1])
+    ram = Send_CANFrame(&EntCmd15765,err);
+    if (*err == SUCCESS && 'A' == ram[1])
     {	
         INFO("\r\n ISO15765_4STD_500K\r\n"); 
-        return SUCCESS;
+        return ISO15765_4STD_500K;
     }
     else
     {
@@ -56,11 +55,11 @@ ErrorStatus ISO15765_4_ProtocolDetect(void)
     }
 
     ISO15765_4_Config(ISO15765_4STD_250K);
-    Send_CANFrame(&EntCmd15765,&err);
-    if (err == SUCCESS && 'A' == ram[1])
+    Send_CANFrame(&EntCmd15765,err);
+    if (*err == SUCCESS && 'A' == ram[1])
     {	
         INFO("\r\n ISO15765_4STD_250K\r\n");
-        return SUCCESS;
+        return ISO15765_4STD_250K;
     }
     else
     {
@@ -68,11 +67,11 @@ ErrorStatus ISO15765_4_ProtocolDetect(void)
     }
     
     ISO15765_4_Config(ISO15765_4EXT_500K);
-    Send_CANFrame(&EntCmd15765,&err);
-    if (err == SUCCESS && 'A' == ram[1])
+    Send_CANFrame(&EntCmd15765,err);
+    if (*err == SUCCESS && 'A' == ram[1])
     {	
         INFO("\r\n ISO15765_4EXT_500K\r\n"); 
-        return SUCCESS;
+        return ISO15765_4EXT_500K;
     }
     else
     {
@@ -80,19 +79,20 @@ ErrorStatus ISO15765_4_ProtocolDetect(void)
     }
 
     ISO15765_4_Config(ISO15765_4EXT_250K);
-    Send_CANFrame(&EntCmd15765,&err);
-    if (err == SUCCESS && 'A' == ram[1])
+    Send_CANFrame(&EntCmd15765,err);
+    if (*err == SUCCESS && 'A' == ram[1])
     {	
         INFO("\r\n ISO15765_4EXT_250K\r\n");
-        return SUCCESS;
+        return ISO15765_4EXT_250K;
     } 
     else
     {
         INFO("\r\n ISO15765_4EXT_250K Failed\r\n"); 
     }
 
-    INFO("\r\n CAN_OBFII_TEST_FAIL\r\n");   
-    return ERROR;
+    INFO("\r\n CAN_OBFII_TEST_FAIL\r\n");
+    *err = ERROR;
+    return ISO15765_4_TYPE_UNKNOWN;
 }
 
 void ISO15765_4_Config(ISO15765_4_TYPE type)

@@ -144,6 +144,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGUARM</Key>
+          <Name>(105=-1,-1,-1,-1,0)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -182,7 +183,7 @@
           <Type>0</Type>
           <LineNumber>75</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134243184</Address>
+          <Address>134253168</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -204,6 +205,11 @@
           <count>1</count>
           <WinNumber>1</WinNumber>
           <ItemText>FLCAN</ItemText>
+        </Ww>
+        <Ww>
+          <count>2</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>ram</ItemText>
         </Ww>
       </WatchWindow1>
       <Tracepoint>
@@ -585,7 +591,7 @@
       <GroupNumber>3</GroupNumber>
       <FileNumber>25</FileNumber>
       <FileType>1</FileType>
-      <tvExp>0</tvExp>
+      <tvExp>1</tvExp>
       <Focus>0</Focus>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>

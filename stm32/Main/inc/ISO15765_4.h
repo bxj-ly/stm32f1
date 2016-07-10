@@ -1,15 +1,18 @@
 #ifndef __ISO15765_4_H
 #define __ISO15765_4_H
 
-ErrorStatus ISO15765_4_ProtocolDetect(void);
+
 
 typedef enum {
     ISO15765_4STD_500K = 0, 
     ISO15765_4EXT_500K = 1, 
     ISO15765_4STD_250K = 3, 
-    ISO15765_4EXT_250K = 4
+    ISO15765_4EXT_250K = 4,
+    ISO15765_4_TYPE_UNKNOWN = 5,
 } ISO15765_4_TYPE;
 void ISO15765_4_Config(ISO15765_4_TYPE type);
+
+ISO15765_4_TYPE ISO15765_4_ProtocolDetect(ErrorStatus *err);
 
 char* ISO15765_4_ReadDTC(ErrorStatus* err);
 

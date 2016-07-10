@@ -23,11 +23,12 @@
 #include "debug.h"
 #include "systick.h"
 #include "uart4.h"
-#include "beeper.h"
+#include "kline.h"
 #include "gps.h"
 #include "ISO15765_4.h"
 #include "spi.h"
 #include "sys_init.h"
+#include "obd.h"
 
 /* PB5 -> GSM_PWRKEY */
 #define SIM800C_PWRKEY_ON()    GPIOB->BRR  = 0x00000020
@@ -331,7 +332,7 @@ uint8_t GSM_GPRSSendData(void)
 
         err = GSM_MsgQuickCheck("\"INSTRUCTION\":\"CCGZM\"}");
         if(err == 0) {
-            ISO15765_4_CleanUpDTC(&errStatus);
+            OBD_CleanUpDTC(&errStatus);
             INFO("\r\n DTC was cleaned up!");
             break;
         }
@@ -398,6 +399,8 @@ uint8_t GSM_GPRSPushCarStatus(void)
   double longitude = 0;
   double latitude = 0;
   char tmp[128];
+  u8 kkw[2];
+  u8 kdata[7];
 
   GSM_CheckCarBatteryVoltage();
   GSM_CheckBTSPosition();
@@ -430,47 +433,77 @@ uint8_t GSM_GPRSPushCarStatus(void)
     longitude = (double)GPS_data.lon.deg + ((double)GPS_data.lon.min + (double)GPS_data.lon.minp1 / 100 + (double)GPS_data.lon.minp2 / 10000) / 60;
     latitude = (double)GPS_data.lat.deg + ((double)GPS_data.lat.min + (double)GPS_data.lat.minp1 / 100 + (double)GPS_data.lat.minp2 / 10000) / 60;     
   }
+
+
+    switch(OBD_GetProtocol())
+    {
+    case OBD_ISO14230_4ADDR:
+        ISO14230_4ADDR_start(kkw);
+        break;
+        
+    case OBD_ISO14230_4HL:
+        ISO14230_4HL_start(kdata);
+        break;
+
+    case OBD_ISO9141_2ADDR:
+        ISO9141_2ADDR_start(kkw);
+        break;
+        
+    case OBD_ISO15765_4STD_500K:
+    case OBD_ISO15765_4EXT_500K:
+    case OBD_ISO15765_4STD_250K:
+    case OBD_ISO15765_4EXT_250K:
+    case OBD_PROTOCOL_UNKNOWN:
+    default:
+        break;
+    }  
+  
   sprintf((char*)gsm_json_datas,
     "{\"DATA\":[{\"pn\":\"%s\"},{\"alarmdata\":\"0\"},{\"commanddata\":\"10\",",
     ROLLER_PHONE_NUM);
+
+  sprintf(tmp,
+    "\"BUSTYPE\":\"%d\",",
+    OBD_GetProtocol());
+  strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);    
   sprintf(tmp,
     "\"OBDZS\":\"%s\",",
-    ISO15765_4_ReadDS(CAN_RPM, &errStatus));
+    OBD_ReadDS(CAN_RPM, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDCS\":\"%s\",",
-    ISO15765_4_ReadDS(CAN_VSS, &errStatus));
+    OBD_ReadDS(CAN_VSS, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDSW\":\"%s\",",
-    ISO15765_4_ReadDS(CAN_ECT, &errStatus));
+    OBD_ReadDS(CAN_ECT, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);  
 
   sprintf(tmp,
     "\"OBDKQLL\":\"%s\",",
-    ISO15765_4_ReadDS(CAN_MAF, &errStatus));
+    OBD_ReadDS(CAN_MAF, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDQGJDYL\":\"%s\",",
-    ISO15765_4_ReadDS(CAN_MAP, &errStatus));
+    OBD_ReadDS(CAN_MAP, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDJQMKD\":\"%s\",",
-    ISO15765_4_ReadDS(CAN_TP, &errStatus));
+    OBD_ReadDS(CAN_TP, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
   
   sprintf(tmp,
     "\"OBDYNDCGQZ\":\"%s\",",
-    ISO15765_4_ReadDS(CAN_O2B1S1, &errStatus));
+    OBD_ReadDS(CAN_O2B1S1, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDFHBFB\":\"%s\",",
-    ISO15765_4_ReadDS(CAN_LOAD_PCT, &errStatus));
+    OBD_ReadDS(CAN_LOAD_PCT, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
@@ -501,12 +534,12 @@ uint8_t GSM_GPRSPushCarStatus(void)
 
   sprintf(tmp,
     "\"OBDECN\":\"%s\",",
-    ISO15765_4_ReadDS(CAN_DTC_CN, &errStatus));
+    OBD_ReadDS(CAN_DTC_CN, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDEC\":\"%s\"},{\"bookdata\":\"0\"}]}\r\n",
-    ISO15765_4_ReadDTC(&errStatus));
+    OBD_ReadDTC(&errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf((char*)gsm_snd_datas, 
