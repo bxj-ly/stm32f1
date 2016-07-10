@@ -110,10 +110,10 @@ static void TIM2_Configuration(void)
 
 void TIM2_Init(void)
 {
-	/* TIM2 config */
-  TIM2_NVIC_Configuration();
-  TIM2_Configuration();
+    /* TIM2 config */
+    TIM2_NVIC_Configuration();
+    TIM2_Configuration();
 
-  /* TIM2 start */
-  START_TIME(); 
+    /* TIM2 start */
+    START_TIME(); 
 }

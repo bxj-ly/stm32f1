@@ -1062,7 +1062,7 @@ u8 ISO_9141_2_DTC_CLEAR(u8 KSW[7])   //ISO 9141_2 DTC CLEAR
   * @返回值: char* 数据流结果地址
   **********************************************************************/
 extern __IO char         DSRAM[100];
-char* ISO14230_4ADDR_ReadDS(ISO15765_4_DS cmd, ErrorStatus* err)
+char* ISO14230_4ADDR_ReadDS(OBD_DS_E cmd, ErrorStatus* err)
 {
     float result;
     char * string;
@@ -1092,7 +1092,7 @@ char* ISO14230_4ADDR_ReadDS(ISO15765_4_DS cmd, ErrorStatus* err)
     return (char*)DSRAM;
 }
 
-char* ISO9141_2ADDR_ReadDS(ISO15765_4_DS cmd, ErrorStatus* err)
+char* ISO9141_2ADDR_ReadDS(OBD_DS_E cmd, ErrorStatus* err)
 {
     float result;
     char * string;
@@ -1123,7 +1123,7 @@ char* ISO9141_2ADDR_ReadDS(ISO15765_4_DS cmd, ErrorStatus* err)
 }
 
 
-KLINE_PROTOCOL KLINE_ProtocolDetect(ErrorStatus *err)
+OBD_PROTOCOL_E KLINE_ProtocolDetect(ErrorStatus *err)
 {
     u8 kdata[7];
     u8 kkw[2];
@@ -1131,7 +1131,7 @@ KLINE_PROTOCOL KLINE_ProtocolDetect(ErrorStatus *err)
 
     KLINE_GPIO_Config();
     KVirtualCOM_Config(_50000BuadRate);            //配置K Line
-	
+
     KrecvStat = COM_STOP_BIT ;
     kline_input_data = 0x00;
     KLine_RecvData_Coming = 1;	
@@ -1154,7 +1154,7 @@ KLINE_PROTOCOL KLINE_ProtocolDetect(ErrorStatus *err)
             if((kdata[1] == 0x48) && (kdata[2] == 0x6b))
             {
                 *err = SUCCESS;
-                return ISO9141_2ADDR;
+                return OBD_ISO9141_2ADDR;
             }
         } 
     }
@@ -1177,7 +1177,7 @@ KLINE_PROTOCOL KLINE_ProtocolDetect(ErrorStatus *err)
             if(((kdata[1]&0xC0) == 0x80) && (kdata[4] == 0x41))
             {
                 *err = SUCCESS;
-                return ISO14230_4ADDR;
+                return OBD_ISO14230_4ADDR;
             }
         } 
     }
@@ -1201,13 +1201,13 @@ KLINE_PROTOCOL KLINE_ProtocolDetect(ErrorStatus *err)
             if(((kdata[0]&0xC0) == 0x80) && (kdata[3] == 0x41))
             {
                 *err = SUCCESS;
-                return ISO14230_4HL;
+                return OBD_ISO14230_4HL;
             }            
         } 
     }
 
     *err = ERROR;
-    return UNKNOWN_PROTOCOL;
+    return OBD_PROTOCOL_UNKNOWN;
 
 }
 

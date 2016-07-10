@@ -21,7 +21,6 @@
 #include <string.h>
 #include "stm32f10x.h"
 #include "usart1.h"
-#include "obd.h"
 #include "systick.h"
 #include "tim2.h"
 #include "debug.h"

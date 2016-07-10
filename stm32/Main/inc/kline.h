@@ -2,7 +2,7 @@
 #define __KLINE_H
 #include "stm32f10x.h"
 #include <stdio.h>
-#include "ISO15765_4.h"
+#include "obd.h"
 
 
 extern u8 recvData;
@@ -21,19 +21,9 @@ u8 ISO_14230_DTC_READ(u8 RD[255]);
 u8 ISO_9141_2_DTC_READ(u8 RD[255]) ;
 u8 ISO_14230_DTC_CLEAR(u8 KSW[7]);
 u8 ISO_9141_2_DTC_CLEAR(u8 KSW[7]);
-typedef enum 
-{
-    ISO14230_4ADDR = 0,
-    ISO14230_4HL,
-    ISO9141_2ADDR,
-    UNKNOWN_PROTOCOL
 
-}KLINE_PROTOCOL;
-
-KLINE_PROTOCOL KLINE_ProtocolDetect(ErrorStatus *err);
-char* ISO14230_4ADDR_ReadDS(ISO15765_4_DS cmd, ErrorStatus* err);
-char* ISO9141_2ADDR_ReadDS(ISO15765_4_DS cmd, ErrorStatus* err);
-
-
+OBD_PROTOCOL_E KLINE_ProtocolDetect(ErrorStatus *err);
+char* ISO14230_4ADDR_ReadDS(OBD_DS_E cmd, ErrorStatus* err);
+char* ISO9141_2ADDR_ReadDS(OBD_DS_E cmd, ErrorStatus* err);
 
 #endif  /*__BT_H*/

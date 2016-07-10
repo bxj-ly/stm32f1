@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include "debug.h"
 #include "systick.h"
-#include "obd.h"
 #include "formula.h"
 #include "ISO15765_4.h"
 
@@ -38,81 +37,81 @@ CanTxMsg CDTCCmd15765 = {0x7DF,0x18DB33F1,CAN_ID_STD,CAN_RTR_DATA,8,0x01,0x04,0x
 CanTxMsg DSCmd15765   = {0x7DF,0x18DB33F1,CAN_ID_STD,CAN_RTR_DATA,8,0x02,0x01,0x00,0x00,0x00,0x00,0x00,0x00};
 /************************************************************************/
 
-ISO15765_4_TYPE ISO15765_4_ProtocolDetect(ErrorStatus *err)
+OBD_PROTOCOL_E ISO15765_4_ProtocolDetect(ErrorStatus *err)
 {
     uint8_t *ram;
     
-    ISO15765_4_Config(ISO15765_4STD_500K);
+    ISO15765_4_Config(OBD_ISO15765_4STD_500K);
     ram = Send_CANFrame(&EntCmd15765,err);
     if (*err == SUCCESS && 'A' == ram[1])
-    {	
-        INFO("\r\n ISO15765_4STD_500K\r\n"); 
-        return ISO15765_4STD_500K;
+    {
+        INFO("\r\n OBD_ISO15765_4STD_500K\r\n"); 
+        return OBD_ISO15765_4STD_500K;
     }
     else
     {
-        INFO("\r\n ISO15765_4STD_500K Failed\r\n"); 
+        INFO("\r\n OBD_ISO15765_4STD_500K Failed\r\n"); 
     }
 
-    ISO15765_4_Config(ISO15765_4STD_250K);
+    ISO15765_4_Config(OBD_ISO15765_4STD_250K);
     Send_CANFrame(&EntCmd15765,err);
     if (*err == SUCCESS && 'A' == ram[1])
-    {	
-        INFO("\r\n ISO15765_4STD_250K\r\n");
-        return ISO15765_4STD_250K;
+    {
+        INFO("\r\n OBD_ISO15765_4STD_250K\r\n");
+        return OBD_ISO15765_4STD_250K;
     }
     else
     {
-        INFO("\r\n ISO15765_4STD_250K Failed\r\n"); 
+        INFO("\r\n OBD_ISO15765_4STD_250K Failed\r\n"); 
     }
     
-    ISO15765_4_Config(ISO15765_4EXT_500K);
+    ISO15765_4_Config(OBD_ISO15765_4EXT_500K);
     Send_CANFrame(&EntCmd15765,err);
     if (*err == SUCCESS && 'A' == ram[1])
-    {	
-        INFO("\r\n ISO15765_4EXT_500K\r\n"); 
-        return ISO15765_4EXT_500K;
+    {
+        INFO("\r\n OBD_ISO15765_4EXT_500K\r\n"); 
+        return OBD_ISO15765_4EXT_500K;
     }
     else
     {
-        INFO("\r\n ISO15765_4EXT_500K Failed\r\n"); 
+        INFO("\r\n OBD_ISO15765_4EXT_500K Failed\r\n"); 
     }
 
-    ISO15765_4_Config(ISO15765_4EXT_250K);
+    ISO15765_4_Config(OBD_ISO15765_4EXT_250K);
     Send_CANFrame(&EntCmd15765,err);
     if (*err == SUCCESS && 'A' == ram[1])
-    {	
-        INFO("\r\n ISO15765_4EXT_250K\r\n");
-        return ISO15765_4EXT_250K;
+    {
+        INFO("\r\n OBD_ISO15765_4EXT_250K\r\n");
+        return OBD_ISO15765_4EXT_250K;
     } 
     else
     {
-        INFO("\r\n ISO15765_4EXT_250K Failed\r\n"); 
+        INFO("\r\n OBD_ISO15765_4EXT_250K Failed\r\n"); 
     }
 
     INFO("\r\n CAN_OBFII_TEST_FAIL\r\n");
     *err = ERROR;
-    return ISO15765_4_TYPE_UNKNOWN;
+    return OBD_PROTOCOL_UNKNOWN;
 }
 
-void ISO15765_4_Config(ISO15765_4_TYPE type)
+void ISO15765_4_Config(OBD_PROTOCOL_E type)
 {
     switch(type)
     {
-    case ISO15765_4STD_500K:
+    case OBD_ISO15765_4STD_500K:
     default:    
         CAN_Config(CAN_500K, CAN_ID_STD);
         break;
 
-    case ISO15765_4EXT_500K:
+    case OBD_ISO15765_4EXT_500K:
         CAN_Config(CAN_500K, CAN_ID_EXT);
         break;
 
-    case ISO15765_4STD_250K:
+    case OBD_ISO15765_4STD_250K:
         CAN_Config(CAN_250K, CAN_ID_STD);
         break;
         
-    case ISO15765_4EXT_250K:
+    case OBD_ISO15765_4EXT_250K:
         CAN_Config(CAN_250K, CAN_ID_EXT);
         break;        
     }
@@ -134,7 +133,7 @@ __IO char         DSRAM[100];
   * @参数:  CanTxMsg* DSCmd:数据流命令 ErrorStatus* err 
   * @返回值: char* 数据流结果地址
   **********************************************************************/
-char* ISO15765_4_ReadDS(ISO15765_4_DS cmd, ErrorStatus* err)
+char* ISO15765_4_ReadDS(OBD_DS_E cmd, ErrorStatus* err)
 {
     uint8_t *ram;
     float result;

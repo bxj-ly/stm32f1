@@ -3,158 +3,158 @@
 extern __IO char         DTCRAM[200];
 /*******************************数据流控制******************************/
 const DSControlTypeDef DSControl[DSTotalX] = {
-                                               {Numeric  ,0x01,3,"%.0f",Formula000,NONE      },//DS000  ECU中存储的故障码数量
-											   {Character,0x01,3,"    ",NONE      ,Formula001},//DS001  MIL(故障指示灯)状态
-											   {Character,0x01,4,"    ",NONE      ,Formula002},//DS002  支持失火监测
-											   {Character,0x01,4,"    ",NONE      ,Formula003},//DS003  支持燃油系统监测
-											   {Character,0x01,4,"    ",NONE      ,Formula004},//DS004  支持综合部件监测
-											   {Character,0x01,4,"    ",NONE      ,Formula005},//DS005  失火监测准备就绪
-											   {Character,0x01,4,"    ",NONE      ,Formula006},//DS006  燃油系统监测准备就绪
-											   {Character,0x01,4,"    ",NONE      ,Formula007},//DS007  综合部件监测准备就绪
-											   {Character,0x01,5,"    ",NONE      ,Formula002},//DS008  支持NMHC催化剂监测(清码后)
-											   {Character,0x01,5,"    ",NONE      ,Formula003},//DS009  支持氮氧化合物后处理监测(清码后)
-											   {Character,0x01,5,"    ",NONE      ,Formula008},//DS010  支持增压压力系统监测(清码后)
-											   {Character,0x01,5,"    ",NONE      ,Formula009},//DS011  支持废气传感器监测(清码后)
-											   {Character,0x01,5,"    ",NONE      ,Formula010},//DS012  支持PM(颗粒物)过滤器监测(清码后)
-											   {Character,0x01,5,"    ",NONE      ,Formula011},//DS013  支持EGR(废气再循环)系统和/或VVT(可变阀正时)系统监测(清码后)
-											   {Character,0x01,6,"    ",NONE      ,Formula012},//DS014  NMHC催化剂监测准备就绪(清码后)
-											   {Character,0x01,6,"    ",NONE      ,Formula013},//DS015  氮氧化合物后处理监测准备就绪(清码后)
-											   {Character,0x01,6,"    ",NONE      ,Formula014},//DS016  增压压力系统监测准备就绪(清码后)
-											   {Character,0x01,6,"    ",NONE      ,Formula006},//DS017  废气传感器监测准备就绪(清码后)
-											   {Character,0x01,6,"    ",NONE      ,Formula007},//DS018  PM(颗粒物)监测准备就绪(清码后)
-                                               {Character,0x01,6,"    ",NONE      ,Formula015},//DS019  支持EGR(废气再循环)系统和/或VVT(可变阀正时)系统监测准备就绪(清码后)
-											   {Character,0x41,4,"    ",NONE      ,Formula002},//DS020  失火检测激活
-											   {Character,0x41,4,"    ",NONE      ,Formula003},//DS021  燃油系统检测激活
-											   {Character,0x41,4,"    ",NONE      ,Formula004},//DS022  综合部件检测启用
-											   {Character,0x41,4,"    ",NONE      ,Formula005},//DS023  失火检测完成
-											   {Character,0x41,4,"    ",NONE      ,Formula006},//DS024  燃油系统检测完成
-											   {Character,0x41,5,"    ",NONE      ,Formula002},//DS025  支持NMHC催化剂监测(驾驶循环)
-											   {Character,0x41,5,"    ",NONE      ,Formula003},//DS026  支持氮氧化合物后处理监测(驾驶循环)
-											   {Character,0x41,5,"    ",NONE      ,Formula008},//DS027  支持增压压力系统监测(驾驶循环)
-											   {Character,0x41,5,"    ",NONE      ,Formula009},//DS028  支持废气传感器监测(驾驶循环)
-											   {Character,0x41,5,"    ",NONE      ,Formula010},//DS029  支持PM(颗粒物)过滤器监测(驾驶循环)
-											   {Character,0x41,5,"    ",NONE      ,Formula011},//DS030  支持EGR(废气再循环)系统和/或VVT(可变阀正时)系统监测(驾驶循环)
-											   {Character,0x41,6,"    ",NONE      ,Formula012},//DS031  NMHC催化剂监测准备就绪(驾驶循环)                         
-											   {Character,0x41,6,"    ",NONE      ,Formula013},//DS032  氮氧化合物后处理监测准备就绪(驾驶循环)
-											   {Character,0x41,6,"    ",NONE      ,Formula014},//DS033  增压压力系统监测准备就绪(驾驶循环)
-											   {Character,0x41,6,"    ",NONE      ,Formula006},//DS034  废气传感器监测准备就绪(驾驶循环)
-											   {Character,0x41,6,"    ",NONE      ,Formula007},//DS035  PM(颗粒物)监测准备就绪(驾驶循环)
-											   {Character,0x41,6,"    ",NONE      ,Formula015},//DS036  支持EGR(废气再循环)系统和/或VVT(可变阀正时)系统监测准备就绪(驾驶循环) 
-											   {Character,0x02,3,"    ",NONE      ,Formula016},//DS037  导致冻结帧数据存储的故障码
-											   {Character,0x03,3,"    ",NONE      ,Formula017},//DS038  燃油系统1状态
-											   {Character,0x03,4,"    ",NONE      ,Formula017},//DS039  燃油系统2状态
-											   {Numeric  ,0x04,3,"%.2f",Formula018,NONE      },//DS040  负荷计算值
-											   {Numeric  ,0x05,3,"%.0f",Formula019,NONE      },//DS041  发动机冷却液温度
-											   {Numeric  ,0x06,3,"%.2f",Formula020,NONE      },//DS042  短期燃油修正(缸组1) 
-											   {Numeric  ,0x07,3,"%.2f",Formula020,NONE      },//DS043  长期燃油修正(缸组1)
-											   {Numeric  ,0x08,3,"%.2f",Formula020,NONE      },//DS044  短期燃油修正(缸组2)
-											   {Numeric  ,0x09,3,"%.2f",Formula020,NONE      },//DS045  长期燃油修正(缸组2)
-											   {Numeric  ,0x0A,3,"%.0f",Formula021,NONE      },//DS046  油轨压力(表压力)
-											   {Numeric  ,0x0B,3,"%.0f",Formula022,NONE      },//DS047  进气歧管绝对压力
-											   {Numeric  ,0x0C,3,"%.0f",Formula023,NONE      },//DS048  发动机转数
-											   {Numeric  ,0x0D,3,"%.0f",Formula022,NONE      },//DS049  车速传感器
-											   {Numeric  ,0x0E,3,"%.2f",Formula024,NONE      },//DS050  气缸1点火提前角
-											   {Numeric  ,0x0F,3,"%.0f",Formula019,NONE      },//DS051  进气温度
-											   {Numeric  ,0x10,3,"%.2f",Formula025,NONE      },//DS052  来自质量空气流量传感器的空气流量
-											   {Numeric  ,0x11,3,"%.2f",Formula018,NONE      },//DS053  节气门绝对位置
-			                                   {Character,0x12,3,"    ",NONE      ,Formula026},//DS054  指令的二次空气喷射状态
-											   {Character,0x13,3,"    ",NONE      ,Formula027},//DS055  氧传感器位置
-											   {Numeric  ,0x14,3,"%.2f",Formula028,NONE      },//DS056  氧传感器输出电压(缸组1,传感器1)
-											   {Numeric  ,0x14,4,"%.2f",Formula029,NONE      },//DS057  短期燃油修正(缸组1,传感器1)
-											   {Numeric  ,0x15,3,"%.2f",Formula028,NONE      },//DS058  氧传感器输出电压(缸组1,传感器2)
-											   {Numeric  ,0x15,4,"%.2f",Formula029,NONE      },//DS059  短期燃油修正(缸组1,传感器2)
-											   {Numeric  ,0x16,3,"%.2f",Formula028,NONE      },//DS060  氧传感器输出电压(缸组1,传感器3)
-											   {Numeric  ,0x16,4,"%.2f",Formula029,NONE      },//DS061  短期燃油修正(缸组1,传感器3)
-											   {Numeric  ,0x17,3,"%.2f",Formula028,NONE      },//DS062  氧传感器输出电压(缸组1,传感器4)
-											   {Numeric  ,0x17,4,"%.2f",Formula029,NONE      },//DS063  短期燃油修正(缸组1,传感器4)
-											   {Numeric  ,0x18,3,"%.2f",Formula028,NONE      },//DS064  氧传感器输出电压(缸组2,传感器1)
-											   {Numeric  ,0x18,4,"%.2f",Formula029,NONE      },//DS065  短期燃油修正(缸组2,传感器1)
-											   {Numeric  ,0x19,3,"%.2f",Formula028,NONE      },//DS066  氧传感器输出电压(缸组2,传感器2)
-											   {Numeric  ,0x19,4,"%.2f",Formula029,NONE      },//DS067  短期燃油修正(缸组2,传感器2)
-											   {Numeric  ,0x1A,3,"%.2f",Formula028,NONE      },//DS068  氧传感器输出电压(缸组2,传感器3)
-											   {Numeric  ,0x1A,4,"%.2f",Formula029,NONE      },//DS069  短期燃油修正(缸组2,传感器3)
-											   {Numeric  ,0x1B,3,"%.2f",Formula028,NONE      },//DS070  氧传感器输出电压(缸组2,传感器4)
-											   {Numeric  ,0x1B,4,"%.2f",Formula029,NONE      },//DS071  短期燃油修正(缸组2,传感器4)
-											   {Character,0x1C,3,"    ",NONE      ,Formula030},//DS072  车辆或发动机认真的OBD请求
-											   {Character,0x1D,3,"    ",NONE      ,Formula031},//DS073  氧传感器位置
-											   {Character,0x1E,3,"    ",NONE      ,Formula032},//DS074  PTO(动力输出)状态
-											   {Numeric  ,0x1F,3,"%.0f",Formula033,NONE      },//DS075  发动机启动后时间
-											   {Numeric  ,0x21,3,"%.0f",Formula033,NONE      },//DS076  MIL(故障指示灯)点亮后的行驶距离
-											   {Numeric  ,0x22,3,"%.2f",Formula034,NONE      },//DS077  相对于歧管真空度的燃油轨压力
-											   {Numeric  ,0x23,3,"%.0f",Formula035,NONE      },//DS078  油轨压力
-											   {Numeric  ,0x24,3,"%.2f",Formula036,NONE      },//DS079  当量比(λ)(缸组1,传感器1)
-											   {Numeric  ,0x24,5,"%.2f",Formula037,NONE      },//DS080  氧传感器电压(缸组1,传感器1)
-											   {Numeric  ,0x25,3,"%.2f",Formula036,NONE      },//DS081  当量比(λ)(缸组1,传感器2)
-											   {Numeric  ,0x25,5,"%.2f",Formula037,NONE      },//DS082  氧传感器电压(缸组1,传感器2)
-											   {Numeric  ,0x26,3,"%.2f",Formula036,NONE      },//DS083	当量比(λ)(缸组1,传感器3)      
-											   {Numeric  ,0x26,5,"%.2f",Formula037,NONE      },//DS084  氧传感器电压(缸组1,传感器3)
-											   {Numeric  ,0x27,3,"%.2f",Formula036,NONE      },//DS085  当量比(λ)(缸组1,传感器4)  
-											   {Numeric  ,0x27,5,"%.2f",Formula037,NONE      },//DS086  氧传感器电压(缸组1,传感器4)
-											   {Numeric  ,0x28,3,"%.2f",Formula036,NONE      },//DS087  当量比(λ)(缸组2,传感器1)  
-											   {Numeric  ,0x28,5,"%.2f",Formula037,NONE      },//DS088  氧传感器电压(缸组2,传感器1)
-											   {Numeric  ,0x29,3,"%.2f",Formula036,NONE      },//DS089  当量比(λ)(缸组2,传感器2)  
-											   {Numeric  ,0x29,5,"%.2f",Formula037,NONE      },//DS090  氧传感器电压(缸组2,传感器2)
-											   {Numeric  ,0x2A,3,"%.2f",Formula036,NONE      },//DS091  当量比(λ)(缸组2,传感器3)  
-											   {Numeric  ,0x2A,5,"%.2f",Formula037,NONE      },//DS092  氧传感器电压(缸组2,传感器3)
-											   {Numeric  ,0x2B,3,"%.2f",Formula036,NONE      },//DS093  当量比(λ)(缸组2,传感器4)  
-											   {Numeric  ,0x2B,5,"%.2f",Formula037,NONE      },//DS094  氧传感器电压(缸组2,传感器4)
-											   {Numeric  ,0x2C,3,"%.2f",Formula018,NONE      },//DS095  指令EGR
-											   {Numeric  ,0x2D,3,"%.2f",Formula038,NONE      },//DS096  EGR(废气再循环)故障
-											   {Numeric  ,0x2E,3,"%.2f",Formula018,NONE      },//DS097  指令的蒸发净化
-											   {Numeric  ,0x2F,3,"%.2f",Formula018,NONE      },//DS098  燃油液位输入
-											   {Numeric  ,0x30,3,"%.0f",Formula022,NONE      },//DS099  清除故障码后的暖机次数
-											   {Numeric  ,0x31,3,"%.0f",Formula033,NONE      },//DS100  清除故障码后的行驶距离
-											   {Numeric  ,0x32,3,"%.2f",Formula039,NONE      },//DS101  燃油蒸气排放系统蒸气压力
-											   {Numeric  ,0x33,3,"%.0f",Formula022,NONE      },//DS102  大气压
-											   {Numeric  ,0x34,3,"%.2f",Formula036,NONE      },//DS103  当量比(λ)(缸组1,传感器1)  
-											   {Numeric  ,0x34,5,"%.2f",Formula040,NONE      },//DS104  氧传感器电流(缸组1,传感器1)
-											   {Numeric  ,0x35,3,"%.2f",Formula036,NONE      },//DS105  当量比(λ)(缸组1,传感器2)  
-											   {Numeric  ,0x35,5,"%.2f",Formula040,NONE      },//DS106  氧传感器电流(缸组1,传感器2)
-											   {Numeric  ,0x36,3,"%.2f",Formula036,NONE      },//DS107  当量比(λ)(缸组1,传感器3)  
-											   {Numeric  ,0x36,5,"%.2f",Formula040,NONE      },//DS108  氧传感器电流(缸组1,传感器3)
-											   {Numeric  ,0x37,3,"%.2f",Formula036,NONE      },//DS109  当量比(λ)(缸组1,传感器4)  
-											   {Numeric  ,0x37,5,"%.2f",Formula040,NONE      },//DS110  氧传感器电流(缸组1,传感器4)
-											   {Numeric  ,0x38,3,"%.2f",Formula036,NONE      },//DS111  当量比(λ)(缸组2,传感器1)  
-											   {Numeric  ,0x38,5,"%.2f",Formula040,NONE      },//DS112  氧传感器电流(缸组2,传感器1)
-											   {Numeric  ,0x39,3,"%.2f",Formula036,NONE      },//DS113  当量比(λ)(缸组2,传感器2)  
-											   {Numeric  ,0x39,5,"%.2f",Formula040,NONE      },//DS114  氧传感器电流(缸组2,传感器2)
-											   {Numeric  ,0x3A,3,"%.2f",Formula036,NONE      },//DS115  当量比(λ)(缸组2,传感器3)  
-											   {Numeric  ,0x3A,5,"%.2f",Formula040,NONE      },//DS116  氧传感器电流(缸组2,传感器3)
-											   {Numeric  ,0x3B,3,"%.2f",Formula036,NONE      },//DS117  当量比(λ)(缸组2,传感器4)  
-											   {Numeric  ,0x3B,5,"%.2f",Formula040,NONE      },//DS118  氧传感器电流(缸组2,传感器4)
-											   {Numeric  ,0x3C,3,"%.1f",Formula041,NONE      },//DS119  催化剂温度(缸组1,传感器1)
-											   {Numeric  ,0x3D,3,"%.1f",Formula041,NONE      },//DS120  催化剂温度(缸组2,传感器1)
-											   {Numeric  ,0x3E,3,"%.1f",Formula041,NONE      },//DS121  催化剂温度(缸组1,传感器2)
-											   {Numeric  ,0x3F,3,"%.1f",Formula041,NONE      },//DS122  催化剂温度(缸组2,传感器2)
-											   {Numeric  ,0x42,3,"%.2f",Formula042,NONE      },//DS123  控制模块电压
-											   {Numeric  ,0x43,3,"%.2f",Formula043,NONE      },//DS124  绝对负荷值
-											   {Numeric  ,0x44,3,"%.2f",Formula036,NONE      },//DS125  燃油/空气指令的当量比
-											   {Numeric  ,0x45,3,"%.2f",Formula018,NONE      },//DS126  节气门相对位置
-											   {Numeric  ,0x46,3,"%.0f",Formula019,NONE      },//DS127  环境温度
-											   {Numeric  ,0x47,3,"%.2f",Formula018,NONE      },//DS128  节气门绝对位置B
-											   {Numeric  ,0x48,3,"%.2f",Formula018,NONE      },//DS129  节气门绝对位置C
-											   {Numeric  ,0x49,3,"%.2f",Formula018,NONE      },//DS130  节气门绝对位置D
-											   {Numeric  ,0x4A,3,"%.2f",Formula018,NONE      },//DS131  节气门绝对位置E
-											   {Numeric  ,0x4B,3,"%.2f",Formula018,NONE      },//DS132  节气门绝对位置F
-											   {Numeric  ,0x4C,3,"%.2f",Formula018,NONE      },//DS133  指令的节气门执行器控制
-											   {Numeric  ,0x4D,3,"%.0f",Formula033,NONE      },//DS134  故障指示灯点亮时发动机运转时间
-											   {Numeric  ,0x4E,3,"%.0f",Formula033,NONE      },//DS135  清除故障码后的发动机运转时间
-											   {Character,0x51,3,"    ",NONE      ,Formula044},//DS136  车辆当前使用的燃料类型
-											   {Numeric  ,0x52,3,"%.2f",Formula018,NONE      },//DS137  酒精燃料百分比
-											   {Numeric  ,0x53,3,"%.2f",Formula045,NONE      },//DS138  燃油蒸气排放系统蒸气绝对压力
-											   {Numeric  ,0x54,3,"%.0f",Formula046,NONE      },//DS139  蒸气排放系统蒸气压力
-											   {Numeric  ,0x55,3,"%.2f",Formula047,NONE      },//DS140  副氧传感器短期燃油修正-缸组1
-											   {Numeric  ,0x56,3,"%.2f",Formula047,NONE      },//DS141  副氧传感器长期燃油修正-缸组1
-											   {Numeric  ,0x57,3,"%.2f",Formula047,NONE      },//DS142  副氧传感器短期燃油修正-缸组2
-											   {Numeric  ,0x58,3,"%.2f",Formula047,NONE      },//DS143  副氧传感器长期燃油修正-缸组2
-											   {Numeric  ,0x59,3,"%.0f",Formula035,NONE      },//DS144  油轨压力(绝对压力)
-											   {Numeric  ,0x5A,3,"%.2f",Formula018,NONE      },//DS145  油门踏板相对位置
-											   {Numeric  ,0x5B,3,"%.2f",Formula018,NONE      },//DS146  混合动力所用电池组剩余使用时间
-											   {Numeric  ,0x5C,3,"%.0f",Formula019,NONE      },//DS147  发动机机油温度
-											   {Numeric  ,0x5D,3,"%.2f",Formula048,NONE      },//DS148  喷油正时
-											   {Numeric  ,0x5E,3,"%.2f",Formula049,NONE      },//DS149  发动机供油率
-											   {Numeric  ,0x5F,3,"%.1f",Formula050,NONE      },//DS150  车辆排放要求
-											};
+{Numeric  ,0x01,3,"%.0f",Formula000,NONE      },//DS000  ECU中存储的故障码数量
+{Character,0x01,3,"    ",NONE      ,Formula001},//DS001  MIL(故障指示灯)状态
+{Character,0x01,4,"    ",NONE      ,Formula002},//DS002  支持失火监测
+{Character,0x01,4,"    ",NONE      ,Formula003},//DS003  支持燃油系统监测
+{Character,0x01,4,"    ",NONE      ,Formula004},//DS004  支持综合部件监测
+{Character,0x01,4,"    ",NONE      ,Formula005},//DS005  失火监测准备就绪
+{Character,0x01,4,"    ",NONE      ,Formula006},//DS006  燃油系统监测准备就绪
+{Character,0x01,4,"    ",NONE      ,Formula007},//DS007  综合部件监测准备就绪
+{Character,0x01,5,"    ",NONE      ,Formula002},//DS008  支持NMHC催化剂监测(清码后)
+{Character,0x01,5,"    ",NONE      ,Formula003},//DS009  支持氮氧化合物后处理监测(清码后)
+{Character,0x01,5,"    ",NONE      ,Formula008},//DS010  支持增压压力系统监测(清码后)
+{Character,0x01,5,"    ",NONE      ,Formula009},//DS011  支持废气传感器监测(清码后)
+{Character,0x01,5,"    ",NONE      ,Formula010},//DS012  支持PM(颗粒物)过滤器监测(清码后)
+{Character,0x01,5,"    ",NONE      ,Formula011},//DS013  支持EGR(废气再循环)系统和/或VVT(可变阀正时)系统监测(清码后)
+{Character,0x01,6,"    ",NONE      ,Formula012},//DS014  NMHC催化剂监测准备就绪(清码后)
+{Character,0x01,6,"    ",NONE      ,Formula013},//DS015  氮氧化合物后处理监测准备就绪(清码后)
+{Character,0x01,6,"    ",NONE      ,Formula014},//DS016  增压压力系统监测准备就绪(清码后)
+{Character,0x01,6,"    ",NONE      ,Formula006},//DS017  废气传感器监测准备就绪(清码后)
+{Character,0x01,6,"    ",NONE      ,Formula007},//DS018  PM(颗粒物)监测准备就绪(清码后)
+{Character,0x01,6,"    ",NONE      ,Formula015},//DS019  支持EGR(废气再循环)系统和/或VVT(可变阀正时)系统监测准备就绪(清码后)
+{Character,0x41,4,"    ",NONE      ,Formula002},//DS020  失火检测激活
+{Character,0x41,4,"    ",NONE      ,Formula003},//DS021  燃油系统检测激活
+{Character,0x41,4,"    ",NONE      ,Formula004},//DS022  综合部件检测启用
+{Character,0x41,4,"    ",NONE      ,Formula005},//DS023  失火检测完成
+{Character,0x41,4,"    ",NONE      ,Formula006},//DS024  燃油系统检测完成
+{Character,0x41,5,"    ",NONE      ,Formula002},//DS025  支持NMHC催化剂监测(驾驶循环)
+{Character,0x41,5,"    ",NONE      ,Formula003},//DS026  支持氮氧化合物后处理监测(驾驶循环)
+{Character,0x41,5,"    ",NONE      ,Formula008},//DS027  支持增压压力系统监测(驾驶循环)
+{Character,0x41,5,"    ",NONE      ,Formula009},//DS028  支持废气传感器监测(驾驶循环)
+{Character,0x41,5,"    ",NONE      ,Formula010},//DS029  支持PM(颗粒物)过滤器监测(驾驶循环)
+{Character,0x41,5,"    ",NONE      ,Formula011},//DS030  支持EGR(废气再循环)系统和/或VVT(可变阀正时)系统监测(驾驶循环)
+{Character,0x41,6,"    ",NONE      ,Formula012},//DS031  NMHC催化剂监测准备就绪(驾驶循环)                         
+{Character,0x41,6,"    ",NONE      ,Formula013},//DS032  氮氧化合物后处理监测准备就绪(驾驶循环)
+{Character,0x41,6,"    ",NONE      ,Formula014},//DS033  增压压力系统监测准备就绪(驾驶循环)
+{Character,0x41,6,"    ",NONE      ,Formula006},//DS034  废气传感器监测准备就绪(驾驶循环)
+{Character,0x41,6,"    ",NONE      ,Formula007},//DS035  PM(颗粒物)监测准备就绪(驾驶循环)
+{Character,0x41,6,"    ",NONE      ,Formula015},//DS036  支持EGR(废气再循环)系统和/或VVT(可变阀正时)系统监测准备就绪(驾驶循环) 
+{Character,0x02,3,"    ",NONE      ,Formula016},//DS037  导致冻结帧数据存储的故障码
+{Character,0x03,3,"    ",NONE      ,Formula017},//DS038  燃油系统1状态
+{Character,0x03,4,"    ",NONE      ,Formula017},//DS039  燃油系统2状态
+{Numeric  ,0x04,3,"%.2f",Formula018,NONE      },//DS040  负荷计算值
+{Numeric  ,0x05,3,"%.0f",Formula019,NONE      },//DS041  发动机冷却液温度
+{Numeric  ,0x06,3,"%.2f",Formula020,NONE      },//DS042  短期燃油修正(缸组1) 
+{Numeric  ,0x07,3,"%.2f",Formula020,NONE      },//DS043  长期燃油修正(缸组1)
+{Numeric  ,0x08,3,"%.2f",Formula020,NONE      },//DS044  短期燃油修正(缸组2)
+{Numeric  ,0x09,3,"%.2f",Formula020,NONE      },//DS045  长期燃油修正(缸组2)
+{Numeric  ,0x0A,3,"%.0f",Formula021,NONE      },//DS046  油轨压力(表压力)
+{Numeric  ,0x0B,3,"%.0f",Formula022,NONE      },//DS047  进气歧管绝对压力
+{Numeric  ,0x0C,3,"%.0f",Formula023,NONE      },//DS048  发动机转数
+{Numeric  ,0x0D,3,"%.0f",Formula022,NONE      },//DS049  车速传感器
+{Numeric  ,0x0E,3,"%.2f",Formula024,NONE      },//DS050  气缸1点火提前角
+{Numeric  ,0x0F,3,"%.0f",Formula019,NONE      },//DS051  进气温度
+{Numeric  ,0x10,3,"%.2f",Formula025,NONE      },//DS052  来自质量空气流量传感器的空气流量
+{Numeric  ,0x11,3,"%.2f",Formula018,NONE      },//DS053  节气门绝对位置
+{Character,0x12,3,"    ",NONE      ,Formula026},//DS054  指令的二次空气喷射状态
+{Character,0x13,3,"    ",NONE      ,Formula027},//DS055  氧传感器位置
+{Numeric  ,0x14,3,"%.2f",Formula028,NONE      },//DS056  氧传感器输出电压(缸组1,传感器1)
+{Numeric  ,0x14,4,"%.2f",Formula029,NONE      },//DS057  短期燃油修正(缸组1,传感器1)
+{Numeric  ,0x15,3,"%.2f",Formula028,NONE      },//DS058  氧传感器输出电压(缸组1,传感器2)
+{Numeric  ,0x15,4,"%.2f",Formula029,NONE      },//DS059  短期燃油修正(缸组1,传感器2)
+{Numeric  ,0x16,3,"%.2f",Formula028,NONE      },//DS060  氧传感器输出电压(缸组1,传感器3)
+{Numeric  ,0x16,4,"%.2f",Formula029,NONE      },//DS061  短期燃油修正(缸组1,传感器3)
+{Numeric  ,0x17,3,"%.2f",Formula028,NONE      },//DS062  氧传感器输出电压(缸组1,传感器4)
+{Numeric  ,0x17,4,"%.2f",Formula029,NONE      },//DS063  短期燃油修正(缸组1,传感器4)
+{Numeric  ,0x18,3,"%.2f",Formula028,NONE      },//DS064  氧传感器输出电压(缸组2,传感器1)
+{Numeric  ,0x18,4,"%.2f",Formula029,NONE      },//DS065  短期燃油修正(缸组2,传感器1)
+{Numeric  ,0x19,3,"%.2f",Formula028,NONE      },//DS066  氧传感器输出电压(缸组2,传感器2)
+{Numeric  ,0x19,4,"%.2f",Formula029,NONE      },//DS067  短期燃油修正(缸组2,传感器2)
+{Numeric  ,0x1A,3,"%.2f",Formula028,NONE      },//DS068  氧传感器输出电压(缸组2,传感器3)
+{Numeric  ,0x1A,4,"%.2f",Formula029,NONE      },//DS069  短期燃油修正(缸组2,传感器3)
+{Numeric  ,0x1B,3,"%.2f",Formula028,NONE      },//DS070  氧传感器输出电压(缸组2,传感器4)
+{Numeric  ,0x1B,4,"%.2f",Formula029,NONE      },//DS071  短期燃油修正(缸组2,传感器4)
+{Character,0x1C,3,"    ",NONE      ,Formula030},//DS072  车辆或发动机认真的OBD请求
+{Character,0x1D,3,"    ",NONE      ,Formula031},//DS073  氧传感器位置
+{Character,0x1E,3,"    ",NONE      ,Formula032},//DS074  PTO(动力输出)状态
+{Numeric  ,0x1F,3,"%.0f",Formula033,NONE      },//DS075  发动机启动后时间
+{Numeric  ,0x21,3,"%.0f",Formula033,NONE      },//DS076  MIL(故障指示灯)点亮后的行驶距离
+{Numeric  ,0x22,3,"%.2f",Formula034,NONE      },//DS077  相对于歧管真空度的燃油轨压力
+{Numeric  ,0x23,3,"%.0f",Formula035,NONE      },//DS078  油轨压力
+{Numeric  ,0x24,3,"%.2f",Formula036,NONE      },//DS079  当量比(λ)(缸组1,传感器1)
+{Numeric  ,0x24,5,"%.2f",Formula037,NONE      },//DS080  氧传感器电压(缸组1,传感器1)
+{Numeric  ,0x25,3,"%.2f",Formula036,NONE      },//DS081  当量比(λ)(缸组1,传感器2)
+{Numeric  ,0x25,5,"%.2f",Formula037,NONE      },//DS082  氧传感器电压(缸组1,传感器2)
+{Numeric  ,0x26,3,"%.2f",Formula036,NONE      },//DS083	当量比(λ)(缸组1,传感器3)      
+{Numeric  ,0x26,5,"%.2f",Formula037,NONE      },//DS084  氧传感器电压(缸组1,传感器3)
+{Numeric  ,0x27,3,"%.2f",Formula036,NONE      },//DS085  当量比(λ)(缸组1,传感器4)  
+{Numeric  ,0x27,5,"%.2f",Formula037,NONE      },//DS086  氧传感器电压(缸组1,传感器4)
+{Numeric  ,0x28,3,"%.2f",Formula036,NONE      },//DS087  当量比(λ)(缸组2,传感器1)  
+{Numeric  ,0x28,5,"%.2f",Formula037,NONE      },//DS088  氧传感器电压(缸组2,传感器1)
+{Numeric  ,0x29,3,"%.2f",Formula036,NONE      },//DS089  当量比(λ)(缸组2,传感器2)  
+{Numeric  ,0x29,5,"%.2f",Formula037,NONE      },//DS090  氧传感器电压(缸组2,传感器2)
+{Numeric  ,0x2A,3,"%.2f",Formula036,NONE      },//DS091  当量比(λ)(缸组2,传感器3)  
+{Numeric  ,0x2A,5,"%.2f",Formula037,NONE      },//DS092  氧传感器电压(缸组2,传感器3)
+{Numeric  ,0x2B,3,"%.2f",Formula036,NONE      },//DS093  当量比(λ)(缸组2,传感器4)  
+{Numeric  ,0x2B,5,"%.2f",Formula037,NONE      },//DS094  氧传感器电压(缸组2,传感器4)
+{Numeric  ,0x2C,3,"%.2f",Formula018,NONE      },//DS095  指令EGR
+{Numeric  ,0x2D,3,"%.2f",Formula038,NONE      },//DS096  EGR(废气再循环)故障
+{Numeric  ,0x2E,3,"%.2f",Formula018,NONE      },//DS097  指令的蒸发净化
+{Numeric  ,0x2F,3,"%.2f",Formula018,NONE      },//DS098  燃油液位输入
+{Numeric  ,0x30,3,"%.0f",Formula022,NONE      },//DS099  清除故障码后的暖机次数
+{Numeric  ,0x31,3,"%.0f",Formula033,NONE      },//DS100  清除故障码后的行驶距离
+{Numeric  ,0x32,3,"%.2f",Formula039,NONE      },//DS101  燃油蒸气排放系统蒸气压力
+{Numeric  ,0x33,3,"%.0f",Formula022,NONE      },//DS102  大气压
+{Numeric  ,0x34,3,"%.2f",Formula036,NONE      },//DS103  当量比(λ)(缸组1,传感器1)  
+{Numeric  ,0x34,5,"%.2f",Formula040,NONE      },//DS104  氧传感器电流(缸组1,传感器1)
+{Numeric  ,0x35,3,"%.2f",Formula036,NONE      },//DS105  当量比(λ)(缸组1,传感器2)  
+{Numeric  ,0x35,5,"%.2f",Formula040,NONE      },//DS106  氧传感器电流(缸组1,传感器2)
+{Numeric  ,0x36,3,"%.2f",Formula036,NONE      },//DS107  当量比(λ)(缸组1,传感器3)  
+{Numeric  ,0x36,5,"%.2f",Formula040,NONE      },//DS108  氧传感器电流(缸组1,传感器3)
+{Numeric  ,0x37,3,"%.2f",Formula036,NONE      },//DS109  当量比(λ)(缸组1,传感器4)  
+{Numeric  ,0x37,5,"%.2f",Formula040,NONE      },//DS110  氧传感器电流(缸组1,传感器4)
+{Numeric  ,0x38,3,"%.2f",Formula036,NONE      },//DS111  当量比(λ)(缸组2,传感器1)  
+{Numeric  ,0x38,5,"%.2f",Formula040,NONE      },//DS112  氧传感器电流(缸组2,传感器1)
+{Numeric  ,0x39,3,"%.2f",Formula036,NONE      },//DS113  当量比(λ)(缸组2,传感器2)  
+{Numeric  ,0x39,5,"%.2f",Formula040,NONE      },//DS114  氧传感器电流(缸组2,传感器2)
+{Numeric  ,0x3A,3,"%.2f",Formula036,NONE      },//DS115  当量比(λ)(缸组2,传感器3)  
+{Numeric  ,0x3A,5,"%.2f",Formula040,NONE      },//DS116  氧传感器电流(缸组2,传感器3)
+{Numeric  ,0x3B,3,"%.2f",Formula036,NONE      },//DS117  当量比(λ)(缸组2,传感器4)  
+{Numeric  ,0x3B,5,"%.2f",Formula040,NONE      },//DS118  氧传感器电流(缸组2,传感器4)
+{Numeric  ,0x3C,3,"%.1f",Formula041,NONE      },//DS119  催化剂温度(缸组1,传感器1)
+{Numeric  ,0x3D,3,"%.1f",Formula041,NONE      },//DS120  催化剂温度(缸组2,传感器1)
+{Numeric  ,0x3E,3,"%.1f",Formula041,NONE      },//DS121  催化剂温度(缸组1,传感器2)
+{Numeric  ,0x3F,3,"%.1f",Formula041,NONE      },//DS122  催化剂温度(缸组2,传感器2)
+{Numeric  ,0x42,3,"%.2f",Formula042,NONE      },//DS123  控制模块电压
+{Numeric  ,0x43,3,"%.2f",Formula043,NONE      },//DS124  绝对负荷值
+{Numeric  ,0x44,3,"%.2f",Formula036,NONE      },//DS125  燃油/空气指令的当量比
+{Numeric  ,0x45,3,"%.2f",Formula018,NONE      },//DS126  节气门相对位置
+{Numeric  ,0x46,3,"%.0f",Formula019,NONE      },//DS127  环境温度
+{Numeric  ,0x47,3,"%.2f",Formula018,NONE      },//DS128  节气门绝对位置B
+{Numeric  ,0x48,3,"%.2f",Formula018,NONE      },//DS129  节气门绝对位置C
+{Numeric  ,0x49,3,"%.2f",Formula018,NONE      },//DS130  节气门绝对位置D
+{Numeric  ,0x4A,3,"%.2f",Formula018,NONE      },//DS131  节气门绝对位置E
+{Numeric  ,0x4B,3,"%.2f",Formula018,NONE      },//DS132  节气门绝对位置F
+{Numeric  ,0x4C,3,"%.2f",Formula018,NONE      },//DS133  指令的节气门执行器控制
+{Numeric  ,0x4D,3,"%.0f",Formula033,NONE      },//DS134  故障指示灯点亮时发动机运转时间
+{Numeric  ,0x4E,3,"%.0f",Formula033,NONE      },//DS135  清除故障码后的发动机运转时间
+{Character,0x51,3,"    ",NONE      ,Formula044},//DS136  车辆当前使用的燃料类型
+{Numeric  ,0x52,3,"%.2f",Formula018,NONE      },//DS137  酒精燃料百分比
+{Numeric  ,0x53,3,"%.2f",Formula045,NONE      },//DS138  燃油蒸气排放系统蒸气绝对压力
+{Numeric  ,0x54,3,"%.0f",Formula046,NONE      },//DS139  蒸气排放系统蒸气压力
+{Numeric  ,0x55,3,"%.2f",Formula047,NONE      },//DS140  副氧传感器短期燃油修正-缸组1
+{Numeric  ,0x56,3,"%.2f",Formula047,NONE      },//DS141  副氧传感器长期燃油修正-缸组1
+{Numeric  ,0x57,3,"%.2f",Formula047,NONE      },//DS142  副氧传感器短期燃油修正-缸组2
+{Numeric  ,0x58,3,"%.2f",Formula047,NONE      },//DS143  副氧传感器长期燃油修正-缸组2
+{Numeric  ,0x59,3,"%.0f",Formula035,NONE      },//DS144  油轨压力(绝对压力)
+{Numeric  ,0x5A,3,"%.2f",Formula018,NONE      },//DS145  油门踏板相对位置
+{Numeric  ,0x5B,3,"%.2f",Formula018,NONE      },//DS146  混合动力所用电池组剩余使用时间
+{Numeric  ,0x5C,3,"%.0f",Formula019,NONE      },//DS147  发动机机油温度
+{Numeric  ,0x5D,3,"%.2f",Formula048,NONE      },//DS148  喷油正时
+{Numeric  ,0x5E,3,"%.2f",Formula049,NONE      },//DS149  发动机供油率
+{Numeric  ,0x5F,3,"%.1f",Formula050,NONE      },//DS150  车辆排放要求
+};
 
 /************************************************************************
   * @描述:  ECU中存储的故障码数量
@@ -397,7 +397,7 @@ char* Formula016(u8 *p)
   if (dtc!=0)
   {
     strcpy((char*)DTCRAM,PCBU(dtc));
-	return (char*)&DTCRAM[0];
+    return (char*)&DTCRAM[0];
   } 
   return "NODTC";
 }
@@ -411,13 +411,13 @@ char* Formula017(u8 *p)
 {
     switch (*p)
     {
-	  case 0x01:  return "OL";
-      case 0x02:  return "CL";
-      case 0x04:  return "OL-Drive";
-      case 0x08:  return "OL-Fault";
-	  case 0x10:  return "CL-Fault";
-      default:	  return "--";
-	}  
+    case 0x01:  return "OL";
+    case 0x02:  return "CL";
+    case 0x04:  return "OL-Drive";
+    case 0x08:  return "OL-Fault";
+    case 0x10:  return "CL-Fault";
+    default:	  return "--";
+    }  
 }
 /************************************************************************
   * @描述:  负荷计算值

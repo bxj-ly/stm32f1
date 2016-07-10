@@ -468,42 +468,42 @@ uint8_t GSM_GPRSPushCarStatus(void)
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);    
   sprintf(tmp,
     "\"OBDZS\":\"%s\",",
-    OBD_ReadDS(CAN_RPM, &errStatus));
+    OBD_ReadDS(OBD_DS_RPM, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDCS\":\"%s\",",
-    OBD_ReadDS(CAN_VSS, &errStatus));
+    OBD_ReadDS(OBD_DS_VSS, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDSW\":\"%s\",",
-    OBD_ReadDS(CAN_ECT, &errStatus));
+    OBD_ReadDS(OBD_DS_ECT, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);  
 
   sprintf(tmp,
     "\"OBDKQLL\":\"%s\",",
-    OBD_ReadDS(CAN_MAF, &errStatus));
+    OBD_ReadDS(OBD_DS_MAF, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDQGJDYL\":\"%s\",",
-    OBD_ReadDS(CAN_MAP, &errStatus));
+    OBD_ReadDS(OBD_DS_MAP, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDJQMKD\":\"%s\",",
-    OBD_ReadDS(CAN_TP, &errStatus));
+    OBD_ReadDS(OBD_DS_TP, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
   
   sprintf(tmp,
     "\"OBDYNDCGQZ\":\"%s\",",
-    OBD_ReadDS(CAN_O2B1S1, &errStatus));
+    OBD_ReadDS(OBD_DS_O2B1S1, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
     "\"OBDFHBFB\":\"%s\",",
-    OBD_ReadDS(CAN_LOAD_PCT, &errStatus));
+    OBD_ReadDS(OBD_DS_PCT, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,
@@ -534,7 +534,7 @@ uint8_t GSM_GPRSPushCarStatus(void)
 
   sprintf(tmp,
     "\"OBDECN\":\"%s\",",
-    OBD_ReadDS(CAN_DTC_CN, &errStatus));
+    OBD_ReadDS(OBD_DS_DTC_CNT, &errStatus));
   strcpy((char*)(gsm_json_datas+strlen((char*)gsm_json_datas)),tmp);
 
   sprintf(tmp,

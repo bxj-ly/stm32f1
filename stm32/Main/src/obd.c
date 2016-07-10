@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include "debug.h"
 #include "systick.h"
-#include "obd.h"
 #include "formula.h"
 #include "ISO15765_4.h"
 #include "kline.h"
@@ -233,27 +232,27 @@ uint8_t* Send_CANFrame(CanTxMsg* TxMessage,ErrorStatus* err)
 char PCBUCode[6];
 char* PCBU(uint16_t dtc)
 {
-  if ( dtc > 0 && dtc < 0x4000)
-  {
-    strcpy((char*)PCBUCode,"P");
-	sprintf((char*)(PCBUCode + strlen((char*)PCBUCode)),"%04x",dtc);
-  }
-  else if ( dtc > 0x4000 && dtc < 0x8000)
-  {
-    strcpy((char*)PCBUCode,"C");							 
-	sprintf((char*)(PCBUCode + strlen((char*)PCBUCode)),"%04x",dtc - 0x4000);
-  }
-  else if (dtc > 0x8000 && dtc < 0xc000)
-  {
-    strcpy((char*)PCBUCode,"B");
-	sprintf((char*)(PCBUCode + strlen((char*)PCBUCode)),"%04x",dtc - 0x8000);
-  }
-  else if (dtc > 0xc000 && dtc < 0xffff)
-  {
-    strcpy((char*)PCBUCode,"U");
-	sprintf((char*)(PCBUCode + strlen((char*)PCBUCode)),"%04x",dtc - 0xc000);
-  }
-  return &PCBUCode[0];
+    if ( dtc > 0 && dtc < 0x4000)
+    {
+        strcpy((char*)PCBUCode,"P");
+        sprintf((char*)(PCBUCode + strlen((char*)PCBUCode)),"%04x",dtc);
+    }
+    else if ( dtc > 0x4000 && dtc < 0x8000)
+    {
+        strcpy((char*)PCBUCode,"C");
+        sprintf((char*)(PCBUCode + strlen((char*)PCBUCode)),"%04x",dtc - 0x4000);
+    }
+    else if (dtc > 0x8000 && dtc < 0xc000)
+    {
+        strcpy((char*)PCBUCode,"B");
+        sprintf((char*)(PCBUCode + strlen((char*)PCBUCode)),"%04x",dtc - 0x8000);
+    }
+    else if (dtc > 0xc000 && dtc < 0xffff)
+    {
+        strcpy((char*)PCBUCode,"U");
+        sprintf((char*)(PCBUCode + strlen((char*)PCBUCode)),"%04x",dtc - 0xc000);
+    }
+    return &PCBUCode[0];
 }
 /************************************************************************
   * @ÃèÊö:  Çå¿ÕÄÚ´æ
@@ -328,28 +327,28 @@ void SaveData(CanRxMsg* RxMessage)
   }
 }
 
-static OBD_PROTOCOL obd_protocol = OBD_PROTOCOL_UNKNOWN;
+static OBD_PROTOCOL_E obd_protocol = OBD_PROTOCOL_UNKNOWN;
 void OBD_ProtocolDetect(ErrorStatus *err)
 {
     switch(ISO15765_4_ProtocolDetect(err))
     {
-    case ISO15765_4STD_500K: 
+    case OBD_ISO15765_4STD_500K: 
         obd_protocol = OBD_ISO15765_4STD_500K;
         *err = SUCCESS;
         return; 
-    case ISO15765_4EXT_500K: 
+    case OBD_ISO15765_4EXT_500K: 
         obd_protocol = OBD_ISO15765_4EXT_500K;
         *err = SUCCESS;
         return;     
-    case ISO15765_4STD_250K: 
+    case OBD_ISO15765_4STD_250K: 
         obd_protocol = OBD_ISO15765_4STD_250K;
         *err = SUCCESS;
         return;     
-    case ISO15765_4EXT_250K:
+    case OBD_ISO15765_4EXT_250K:
         obd_protocol = OBD_ISO15765_4EXT_250K;
         *err = SUCCESS;
         return;     
-    case ISO15765_4_TYPE_UNKNOWN:
+    case OBD_PROTOCOL_UNKNOWN:
     default:
         break;
 
@@ -357,27 +356,27 @@ void OBD_ProtocolDetect(ErrorStatus *err)
 
     switch(KLINE_ProtocolDetect(err))
     {
-    case ISO14230_4ADDR:
-        INFO("ISO14230_4ADDR\r\n");
+    case OBD_ISO14230_4ADDR:
+        INFO("OBD_ISO14230_4ADDR\r\n");
         obd_protocol = OBD_ISO14230_4ADDR;
         *err = SUCCESS;
         return;
 
-    case ISO14230_4HL:
-        INFO("ISO14230_4HL\r\n");
+    case OBD_ISO14230_4HL:
+        INFO("OBD_ISO14230_4HL\r\n");
         obd_protocol = OBD_ISO14230_4HL;
         *err = SUCCESS;
         return;
 
-    case ISO9141_2ADDR:
-        INFO("ISO9141_2ADDR\r\n");
+    case OBD_ISO9141_2ADDR:
+        INFO("OBD_ISO9141_2ADDR\r\n");
         obd_protocol = OBD_ISO9141_2ADDR;
         *err = SUCCESS;
         return;    
         
-    case UNKNOWN_PROTOCOL:
+    case OBD_PROTOCOL_UNKNOWN:
     default:
-        INFO("UNKNOWN_PROTOCOL\r\n");
+        INFO("OBD_PROTOCOL_UNKNOWN\r\n");
         break;
     }
   
@@ -387,12 +386,12 @@ void OBD_ProtocolDetect(ErrorStatus *err)
 
 }
 
-OBD_PROTOCOL OBD_GetProtocol(void)
+OBD_PROTOCOL_E OBD_GetProtocol(void)
 {
     return obd_protocol;
 }
 
-char* OBD_ReadDS(ISO15765_4_DS cmd, ErrorStatus* err)
+char* OBD_ReadDS(OBD_DS_E cmd, ErrorStatus* err)
 {
     switch(obd_protocol)
     {
@@ -459,13 +458,13 @@ void OBD_KeepLink(void)
 }
 
 
-char* OBD_ISO14230_ReadRTC(ErrorStatus* err)
+char* OBD_ISO14230_ReadDTC(ErrorStatus* err)
 {
     uint8_t ram[255],i;
     uint16_t dtc;
     //uint8_t dtc_cnt;
     ClearRAM((uint8_t*)DTCRAM,200);
-    //dtc_cnt = atoi(OBD_ReadDS(CAN_DTC_CN,err));
+    //dtc_cnt = atoi(OBD_ReadDS(OBD_DS_DTC_CNT,err));
     if (ISO_14230_DTC_READ(ram)==1)
     {
         for(i = 0;i < 128;i++)
@@ -491,13 +490,13 @@ char* OBD_ISO14230_ReadRTC(ErrorStatus* err)
 
 }
 
-char* OBD_ISO9141_ReadRTC(ErrorStatus* err)
+char* OBD_ISO9141_ReadDTC(ErrorStatus* err)
 {
     uint8_t ram[255],i;
     uint16_t dtc;
     //uint8_t dtc_cnt;
     ClearRAM((uint8_t*)DTCRAM,200);
-    //dtc_cnt = atoi(OBD_ReadDS(CAN_DTC_CN,err));
+    //dtc_cnt = atoi(OBD_ReadDS(OBD_DS_DTC_CNT,err));
     if (ISO_9141_2_DTC_READ(ram)==1)
     {
         for(i = 0;i < 128;i++)
@@ -529,10 +528,10 @@ char* OBD_ReadDTC(ErrorStatus* err)
     {
     case OBD_ISO14230_4ADDR:
     case OBD_ISO14230_4HL:
-        return OBD_ISO14230_ReadRTC(err);
+        return OBD_ISO14230_ReadDTC(err);
 
     case OBD_ISO9141_2ADDR:
-        return OBD_ISO9141_ReadRTC(err);
+        return OBD_ISO9141_ReadDTC(err);
         
     case OBD_ISO15765_4STD_500K:
     case OBD_ISO15765_4EXT_500K:
@@ -544,7 +543,7 @@ char* OBD_ReadDTC(ErrorStatus* err)
     default:
         break;
     }
-		
+
     return "";
 }
 
